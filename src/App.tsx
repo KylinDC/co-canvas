@@ -18,7 +18,11 @@ function App() {
           <img src={reactLogo} className='logo react' alt='React logo' />
         </a>
         <a href='https://workers.cloudflare.com/' target='_blank'>
-          <img src={cloudflareLogo} className='logo cloudflare' alt='Cloudflare logo' />
+          <img
+            src={cloudflareLogo}
+            className='logo cloudflare'
+            alt='Cloudflare logo'
+          />
         </a>
       </div>
       <h1>Vite + React + Cloudflare</h1>

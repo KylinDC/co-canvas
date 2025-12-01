@@ -1,0 +1,1 @@
+ALTER TABLE `user_rooms` DROP COLUMN `user_name`;

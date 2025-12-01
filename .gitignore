@@ -29,3 +29,9 @@ dist-ssr
 !.dev.vars.example
 .env*
 !.env.example
+
+# ESlint cache
+.eslintcache
+
+# Test coverage
+coverage

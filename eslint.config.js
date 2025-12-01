@@ -1,6 +1,6 @@
 import js from '@eslint/js'
 import { globalIgnores } from 'eslint/config'
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
+import eslintConfigPrettier from 'eslint-config-prettier/flat'
 import reactDom from 'eslint-plugin-react-dom'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
@@ -10,9 +10,16 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    '*.d.ts',
+    '*.config.{ts,js}',
+    'coverage',
+    'worker-configuration.d.ts',
+  ]),
   {
-    files: ['**/*.{ts,tsx}', '**/*.{js}'],
+    files: ['**/*.{ts,tsx,js}'],
+    ignores: ['**/*.{d.ts}', '**/worker-configuration.d.ts'],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommendedTypeChecked,
@@ -21,7 +28,8 @@ export default tseslint.config([
       reactDom.configs.recommended,
       reactHooks.configs['recommended-latest'],
       reactRefresh.configs.vite,
-      eslintPluginPrettierRecommended,
+      eslintConfigPrettier,
+      // eslintPluginPrettierRecommended,
     ],
     languageOptions: {
       parserOptions: {

@@ -6,22 +6,44 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "format": "biome format --write .",
+    "lint:fast": "biome lint .",
+    "lint:fast:fix": "biome lint --write .",
+    "lint:deep": "eslint . --cache",
+    "lint:deep:fix": "eslint . --fix --cache",
+    "check": "pnpm run lint:fast && pnpm run lint:deep",
     "preview": "pnpm run build && vite preview",
     "deploy": "pnpm run build && wrangler deploy",
-    "cf-typegen": "wrangler types"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "pnpx wrangler d1 migrations apply co-canvas-db --local",
+    "db:migrate:prod": "pnpx wrangler d1 migrations apply co-canvas-db --remote",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push",
+    "cf-typegen": "wrangler types",
+    "test:worker": "vitest --config vitest.worker.config.ts",
+    "test:worker:coverage": "vitest --config vitest.worker.config.ts --run --coverage"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.5",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.10.7",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
     "@cloudflare/vite-plugin": "^1.15.3",
+    "@cloudflare/vitest-pool-workers": "^0.10.11",
     "@eslint/js": "^9.33.0",
+    "@types/node": "^24.10.1",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react-swc": "^4.0.0",
+    "@vitest/coverage-istanbul": "^3.2.4",
+    "drizzle-kit": "^0.31.7",
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -35,6 +57,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
+    "vitest": "~3.2.4",
     "wrangler": "^4.51.0"
   }
 }

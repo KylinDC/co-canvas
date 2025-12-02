@@ -52,7 +52,6 @@ describe('Lobby', () => {
       },
     })
 
-    // Set default mocks
     vi.mocked(userLib.getUserId).mockReturnValue('test-user-id')
     vi.mocked(userLib.getUserName).mockReturnValue('Test User')
     mockUseLocation.mockReturnValue({ state: null })
@@ -140,7 +139,9 @@ describe('Lobby', () => {
     const enterButton = screen.getByRole('button', { name: 'Enter Room' })
     await user.click(enterButton)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/rooms/existing-room-id')
+    expect(mockNavigate).toHaveBeenCalledWith('/rooms/existing-room-id', {
+      state: { userId: 'test-user-id', userName: 'Test User' },
+    })
   })
 
   it('should create room and navigate when clicking Create a Room', async () => {
@@ -176,7 +177,9 @@ describe('Lobby', () => {
           name: "Test User's Room",
         },
       })
-      expect(mockNavigate).toHaveBeenCalledWith('/rooms/new-room-id')
+      expect(mockNavigate).toHaveBeenCalledWith('/rooms/new-room-id', {
+        state: { userId: 'test-user-id', userName: 'Test User' },
+      })
     })
   })
 
@@ -189,7 +192,6 @@ describe('Lobby', () => {
       json: async () => null,
     } as any)
 
-    // Mock a slow create request
     vi.mocked(apiLib.client.api.rooms.$post).mockReturnValue(
       new Promise((resolve) => {
         setTimeout(() => {
@@ -213,7 +215,6 @@ describe('Lobby', () => {
     const createButton = screen.getByRole('button', { name: 'Create a Room' })
     await user.click(createButton)
 
-    // Button should show Creating... and be disabled
     await waitFor(() => {
       expect(
         screen.getByRole('button', { name: 'Creating...' })
@@ -239,7 +240,6 @@ describe('Lobby', () => {
       expect(screen.getByText('Welcome Location User')).toBeInTheDocument()
     })
 
-    // Query should use the userId from location state
     await waitFor(() => {
       expect(apiLib.client.api.rooms.$get).toHaveBeenCalledWith({
         query: {

@@ -20,7 +20,6 @@ describe('rooms', () => {
       expect(result[0].id).toBeDefined()
       expect(typeof result[0].id).toBe('string')
 
-      // Verify room was created in database
       const db = drizzle(env.DB)
       const createdRooms = await db.select().from(rooms).all()
       expect(createdRooms).toHaveLength(1)
@@ -58,7 +57,6 @@ describe('rooms', () => {
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe(roomId)
 
-      // Verify user room was created in database
       const db = drizzle(env.DB)
       const joinedRooms = await db.select().from(userRooms).all()
       expect(joinedRooms).toHaveLength(1)

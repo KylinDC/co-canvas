@@ -62,13 +62,17 @@ export const Lobby = () => {
       return await res.json()
     },
     onSuccess: (data) => {
-      navigate(`/rooms/${data.id}`)
+      navigate(`/rooms/${data.id}`, {
+        state: { userId, userName },
+      })
     },
   })
 
   const handleEnterRoom = () => {
     if (roomData?.roomId) {
-      navigate(`/rooms/${roomData.roomId}`)
+      navigate(`/rooms/${roomData.roomId}`, {
+        state: { userId, userName },
+      })
     }
   }
 

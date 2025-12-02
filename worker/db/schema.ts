@@ -3,8 +3,8 @@ import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const rooms = sqliteTable('rooms', {
   id: text('id').primaryKey(),
-  name: text('name'),
-  doId: text('do_id'),
+  name: text('name').notNull(),
+  doId: text('do_id').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`)

@@ -36,14 +36,12 @@ describe('route', () => {
       expect(json.id).toBeDefined()
       expect(typeof json.id).toBe('string')
 
-      // Verify room was created in database
       const db = drizzle(env.DB)
       const createdRooms = await db.select().from(rooms)
       expect(createdRooms).toHaveLength(1)
       expect(createdRooms[0].id).toBe(json.id)
       expect(createdRooms[0].name).toBe(roomName)
 
-      // Verify user joined as host
       const joinedRooms = await db.select().from(userRooms)
       expect(joinedRooms).toHaveLength(1)
       expect(joinedRooms[0].userId).toBe(userId)
@@ -164,7 +162,6 @@ describe('route', () => {
 
       expect(json1.id).not.toBe(json2.id)
 
-      // Verify both rooms exist in database
       const db = drizzle(env.DB)
       const createdRooms = await db.select().from(rooms)
       expect(createdRooms).toHaveLength(2)

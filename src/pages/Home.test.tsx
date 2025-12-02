@@ -26,7 +26,6 @@ vi.mock('@/lib/user.ts', () => ({
 describe('Home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Set default mocks
     vi.mocked(userLib.getUserId).mockReturnValue(null)
     vi.mocked(userLib.getUserName).mockReturnValue(null)
     vi.mocked(userLib.getNewUserId).mockReturnValue('test-user-id')
@@ -108,10 +107,8 @@ describe('Home', () => {
 
     const submitButton = screen.getByRole('button', { name: 'Continue' })
 
-    // Try to submit without entering a name
     await user.click(submitButton)
 
-    // Form should not submit (HTML5 validation will prevent it)
     expect(userLib.saveUser).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
   })
@@ -127,7 +124,6 @@ describe('Home', () => {
     await user.type(nameInput, '   ')
     await user.click(submitButton)
 
-    // The input will show empty after trimming leading spaces
     expect(nameInput).toHaveValue('')
     expect(userLib.saveUser).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()

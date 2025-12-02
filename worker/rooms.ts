@@ -1,10 +1,11 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { v7 as uuidv7 } from 'uuid'
+import * as schema from './db/schema'
 
 import { rooms, userRooms } from './db/schema.ts'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
-const getDB = (env: Env) => drizzle(env.DB)
+const getDB = (env: Env) => drizzle(env.DB, { schema })
 
 export const createRoom = async (env: Env, name: string) => {
   const newRoomId = uuidv7()
@@ -27,6 +28,13 @@ export const joinRoom = async (
   roomId: string,
   asHost = false
 ) => {
+  const userRoom = await getDB(env).query.userRooms.findFirst({
+    where: and(eq(userRooms.userId, userId), eq(userRooms.roomId, roomId)),
+  })
+  if (userRoom) {
+    return [{ id: userRoom.roomId }]
+  }
+
   return getDB(env)
     .insert(userRooms)
     .values({
@@ -39,9 +47,15 @@ export const joinRoom = async (
 }
 
 export const getRoomWithUserId = async (env: Env, userId: string) => {
-  return getDB(env)
-    .select({ roomId: userRooms.roomId })
-    .from(userRooms)
-    .where(eq(userRooms.userId, userId))
-    .limit(1)
+  return getDB(env).query.userRooms.findFirst({
+    columns: {
+      roomId: true,
+    },
+    where: eq(userRooms.userId, userId),
+  })
+}
+export const getRoom = async (env: Env, id: string) => {
+  return getDB(env).query.rooms.findFirst({
+    where: eq(rooms.id, id),
+  })
 }

@@ -1,8 +1,9 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 
-import { createRoom, getRoomWithUserId, joinRoom } from './rooms.ts'
+import { createRoom, getRoom, getRoomWithUserId, joinRoom } from './rooms.ts'
 import { createRoomReq, getRoomWithUserIdReq } from './schemas.ts'
+import { z } from 'zod'
 
 export const app = new Hono<{ Bindings: Env }>()
 
@@ -20,14 +21,40 @@ const route = app
     const { env, req, json, notFound } = ctx
 
     const { userId } = req.valid('query')
-    const roomIds = await getRoomWithUserId(env, userId)
+    const userRoom = await getRoomWithUserId(env, userId)
 
-    if (roomIds.length === 0) {
+    if (!userRoom) {
       return notFound()
     }
 
-    return json({ roomId: roomIds[0].roomId })
+    return json({ roomId: userRoom.roomId })
   })
+  .get(
+    '/api/rooms/:roomId/connect',
+    zValidator('param', z.object({ roomId: z.uuidv7() })),
+    zValidator(
+      'query',
+      z.object({ userId: z.uuidv7(), sessionId: z.string() })
+    ),
+    async (ctx) => {
+      const { env, req, notFound } = ctx
+
+      const { roomId } = req.valid('param')
+      const { userId } = req.valid('query')
+
+      const room = await getRoom(env, roomId)
+
+      if (!room) {
+        return notFound()
+      }
+
+      await joinRoom(env, userId, roomId)
+      const doId = env.ROOM_DO.idFromString(room.doId)
+      const roomStub = env.ROOM_DO.get(doId)
+
+      return roomStub.fetch(req.raw)
+    }
+  )
   .notFound((ctx) => {
     return ctx.text('Resource Not Found', 404)
   })

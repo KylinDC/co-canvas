@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -23,7 +24,8 @@
     "test": "vitest --config vitest.config.ts",
     "test:coverage": "vitest --config vitest.config.ts --run --coverage",
     "test:worker": "vitest --config vitest.worker.config.ts",
-    "test:worker:coverage": "vitest --config vitest.worker.config.ts --run --coverage"
+    "test:worker:coverage": "vitest --config vitest.worker.config.ts --run --coverage",
+    "test:all": "pnpm run test --run && pnpm run test:worker --run"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.5",
@@ -31,10 +33,14 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.11",
+    "@tldraw/sync": "^4.2.0",
+    "@tldraw/sync-core": "^4.2.0",
+    "@tldraw/tlschema": "^4.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.44.7",
+    "es-toolkit": "^1.42.0",
     "hono": "^4.10.7",
     "lucide-react": "^0.555.0",
     "react": "^19.1.1",
@@ -42,6 +48,7 @@
     "react-router": "^7.9.6",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17",
+    "tldraw": "^4.2.0",
     "uuid": "^13.0.0",
     "zod": "^4.1.13"
   },

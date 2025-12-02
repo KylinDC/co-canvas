@@ -5,3 +5,7 @@ export const createRoomReq = z.object({
   name: z.string(),
 })
 export type CreateRoomReq = z.input<typeof createRoomReq>
+
+export const getRoomWithUserIdReq = z.object({
+  userId: z.uuidv7(),
+})

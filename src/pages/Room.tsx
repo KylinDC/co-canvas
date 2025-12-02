@@ -1,8 +1,8 @@
 import { useSync } from '@tldraw/sync'
 import { type ReactNode, useEffect, useState } from 'react'
 import './room.css'
-import { type TLAssetStore, Tldraw } from 'tldraw'
 import { useLocation, useNavigate, useParams } from 'react-router'
+import { type TLAssetStore, Tldraw } from 'tldraw'
 import { getUserId, getUserName } from '@/lib/user.ts'
 
 export const multiplayerAssetStore: TLAssetStore = {
@@ -64,6 +64,7 @@ function RoomWrapper({
       <div className='RoomWrapper-header'>
         <div>{roomId}</div>
         <button
+          type='button'
           className='RoomWrapper-copy'
           onClick={() => {
             navigator.clipboard.writeText(window.location.href)

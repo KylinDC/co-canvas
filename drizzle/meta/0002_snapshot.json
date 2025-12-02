@@ -87,23 +87,17 @@
       "indexes": {
         "user_rooms_user_id_unique": {
           "name": "user_rooms_user_id_unique",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": true
         },
         "idx_user_room_id": {
           "name": "idx_user_room_id",
-          "columns": [
-            "room_id"
-          ],
+          "columns": ["room_id"],
           "isUnique": false
         },
         "idx_user_updated_at": {
           "name": "idx_user_updated_at",
-          "columns": [
-            "updated_at"
-          ],
+          "columns": ["updated_at"],
           "isUnique": false
         }
       },

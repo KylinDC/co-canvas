@@ -23,7 +23,7 @@ export function Home() {
     const userId = getUserId()
 
     if (userId && userName) {
-     navigate('/rooms', { state: { userId, userName } })
+      navigate('/rooms', { state: { userId, userName } })
     } else {
       setUserExisted(false)
     }

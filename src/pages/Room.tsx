@@ -269,6 +269,17 @@ function RoomWrapper({
   return (
     <div className='RoomWrapper'>
       <div className='RoomWrapper-header'>
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          onClick={() => {
+            void navigate('/rooms')
+          }}
+          aria-label='back to lobby'
+        >
+          ← Back to Lobby
+        </Button>
         <div>{roomName}</div>
         <Button
           type='button'

@@ -1,20 +1,22 @@
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, act } from '@testing-library/react'
 
-import { Room } from './Room'
 import * as userLib from '@/lib/user.ts'
 import { renderWithProviders } from '@/test-utils'
+
+import { Room } from './Room'
 
 const mockNavigate = vi.fn()
 const mockUseParams = vi.fn()
 const mockUseLocation = vi.fn()
 
 vi.mock('react-router', async () => {
-  const actual = await vi.importActual('react-router')
+  const actual =
+    await vi.importActual<typeof import('react-router')>('react-router')
   return {
     ...actual,
-    useNavigate: () => mockNavigate,
+    useNavigate: () => mockNavigate(),
     useParams: () => mockUseParams(),
     useLocation: () => mockUseLocation(),
   }
@@ -27,11 +29,11 @@ vi.mock('@/lib/user.ts', () => ({
 
 const mockUseSync = vi.fn()
 vi.mock('@tldraw/sync', () => ({
-  useSync: (config: any) => mockUseSync(config),
+  useSync: (config: unknown) => mockUseSync(config),
 }))
 
 vi.mock('tldraw', () => ({
-  Tldraw: ({ store }: { store: any }) => (
+  Tldraw: ({ store }: { store: unknown }) => (
     <div data-testid='tldraw'>{store ? 'Tldraw Loaded' : 'No Store'}</div>
   ),
 }))
@@ -131,6 +133,7 @@ describe('Room', () => {
       expect.objectContaining({
         assets: expect.objectContaining({
           upload: expect.any(Function),
+
           resolve: expect.any(Function),
         }),
       })
@@ -204,7 +207,7 @@ describe('Room', () => {
     expect(screen.getByText('Copied!')).toBeInTheDocument()
   })
 
-  it('should hide "Copied!" message after 3 seconds', async () => {
+  it('should hide "Copied!" message after 3 seconds', () => {
     vi.useFakeTimers()
     const mockWriteText = vi.fn().mockResolvedValue(undefined)
 

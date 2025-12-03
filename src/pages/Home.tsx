@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
+
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,7 +24,7 @@ export function Home() {
     const userId = getUserId()
 
     if (userId && userName) {
-      navigate('/rooms', { state: { userId, userName } })
+      void navigate('/rooms', { state: { userId, userName } })
     } else {
       setUserExisted(false)
     }
@@ -35,7 +36,7 @@ export function Home() {
     if (newUserName) {
       const newUserId = getNewUserId()
       saveUser(newUserId, newUserName)
-      navigate('/rooms', {
+      void navigate('/rooms', {
         state: { userId: newUserId, userName: newUserName },
       })
     }

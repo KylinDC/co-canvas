@@ -23,8 +23,8 @@
     "cf-typegen": "wrangler types",
     "test": "vitest --config vitest.config.ts --run",
     "test:coverage": "vitest --config vitest.config.ts --run --coverage",
-    "test:worker": "vitest --config vitest.worker.config.ts --run",
-    "test:worker:coverage": "vitest --config vitest.worker.config.ts --run --coverage",
+    "test:worker": "pnpm run build && vitest --config vitest.worker.config.ts --run",
+    "test:worker:coverage": "pnpm run build && vitest --config vitest.worker.config.ts --run --coverage",
     "test:all": "pnpm run test --run && pnpm run test:worker --run",
     "test:all:coverage": "pnpm run test:coverage && pnpm run test:worker:coverage"
   },

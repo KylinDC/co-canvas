@@ -1,6 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+
+import { Button } from '@/components/ui/button.tsx'
 import {
   Card,
   CardContent,
@@ -10,7 +12,6 @@ import {
 } from '@/components/ui/card.tsx'
 import { client } from '@/lib/api.ts'
 import { getUserId, getUserName } from '@/lib/user.ts'
-import { Button } from '@/components/ui/button.tsx'
 
 export const Lobby = () => {
   const location = useLocation()
@@ -21,7 +22,7 @@ export const Lobby = () => {
 
   useEffect(() => {
     if (!userId || !userName) {
-      navigate('/')
+      void navigate('/')
     }
   }, [navigate, userId, userName])
 
@@ -62,7 +63,7 @@ export const Lobby = () => {
       return await res.json()
     },
     onSuccess: (data) => {
-      navigate(`/rooms/${data.id}`, {
+      void navigate(`/rooms/${data.id}`, {
         state: { userId, userName },
       })
     },
@@ -70,7 +71,7 @@ export const Lobby = () => {
 
   const handleEnterRoom = () => {
     if (roomData?.roomId) {
-      navigate(`/rooms/${roomData.roomId}`, {
+      void navigate(`/rooms/${roomData.roomId}`, {
         state: { userId, userName },
       })
     }

@@ -1,12 +1,16 @@
+import './room.css'
+
 import { useSync } from '@tldraw/sync'
 import { type ReactNode, useEffect, useState } from 'react'
-import './room.css'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import { type TLAssetStore, Tldraw } from 'tldraw'
+
 import { getUserId, getUserName } from '@/lib/user.ts'
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const multiplayerAssetStore: TLAssetStore = {
-  async upload(_asset, _file) {
+   
+  async upload() {
     const url = `${window.location.origin}/api/uploads`
     return { src: url }
   },
@@ -27,7 +31,7 @@ export function Room() {
 
   useEffect(() => {
     if (!userId || !userName) {
-      navigate('/')
+      void navigate('/')
     }
   }, [navigate, userId, userName])
 
@@ -67,7 +71,7 @@ function RoomWrapper({
           type='button'
           className='RoomWrapper-copy'
           onClick={() => {
-            navigator.clipboard.writeText(window.location.href)
+            void navigator.clipboard.writeText(window.location.href)
             setDidCopy(true)
           }}
           aria-label='copy room link'

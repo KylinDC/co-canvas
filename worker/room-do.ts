@@ -1,10 +1,10 @@
-import { DurableObject } from 'cloudflare:workers'
-import { TLSocketRoom, type RoomSnapshot } from '@tldraw/sync-core'
+import { type RoomSnapshot, TLSocketRoom } from '@tldraw/sync-core'
 import {
   createTLSchema,
   defaultShapeSchemas,
   type TLRecord,
 } from '@tldraw/tlschema'
+import { DurableObject } from 'cloudflare:workers'
 import { throttle } from 'es-toolkit'
 import { Hono } from 'hono'
 
@@ -22,10 +22,8 @@ export class RoomDO extends DurableObject<Env> {
     super(ctx, env)
 
     this.bucket = env.ROOM_BUCKET
-    ctx.blockConcurrencyWhile(async () => {
-      this.roomId = ((await this.ctx.storage.get('roomId')) ?? null) as
-        | string
-        | null
+    void ctx.blockConcurrencyWhile(async () => {
+      this.roomId = (await this.ctx.storage.get('roomId')) ?? null
     })
   }
 
@@ -36,10 +34,7 @@ export class RoomDO extends DurableObject<Env> {
   private readonly app = new Hono()
     .onError((e, c) => {
       console.log(e)
-      return c.text(
-        e instanceof Error ? e.message : 'Internal Server Error',
-        500
-      )
+      return c.text('Internal Server Error', 500)
     })
     .get('/api/rooms/:roomId/connect', async (ctx) => {
       const { req, text } = ctx
@@ -76,23 +71,21 @@ export class RoomDO extends DurableObject<Env> {
     const roomId = this.roomId
     if (!roomId) throw new Error('RoomId is required')
 
-    if (!this.roomPromise) {
-      this.roomPromise = (async () => {
-        const roomFromBucket = await this.bucket.get(`rooms/${roomId}`)
+    this.roomPromise ??= (async () => {
+      const roomFromBucket = await this.bucket.get(`rooms/${roomId}`)
 
-        const initialSnapshot = roomFromBucket
-          ? ((await roomFromBucket.json()) as RoomSnapshot)
-          : undefined
+      const initialSnapshot = roomFromBucket
+        ? ((await roomFromBucket.json()) as RoomSnapshot)
+        : undefined
 
-        return new TLSocketRoom<TLRecord, void>({
-          schema,
-          initialSnapshot,
-          onDataChange: () => {
-            this.schedulePersistToBucket()
-          },
-        })
-      })()
-    }
+      return new TLSocketRoom<TLRecord, void>({
+        schema,
+        initialSnapshot,
+        onDataChange: () => {
+          this.schedulePersistToBucket()
+        },
+      })
+    })()
 
     return this.roomPromise
   }

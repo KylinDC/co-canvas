@@ -1,13 +1,11 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { z } from 'zod'
 
 import { createRoom, getRoom, getRoomWithUserId, joinRoom } from './rooms.ts'
 import { createRoomReq, getRoomWithUserIdReq } from './schemas.ts'
-import { z } from 'zod'
 
 export const app = new Hono<{ Bindings: Env }>()
-
-const route = app
   .post('/api/rooms', zValidator('json', createRoomReq), async (ctx) => {
     const { env, req, json } = ctx
     const { userId, name } = req.valid('json')
@@ -59,4 +57,4 @@ const route = app
     return ctx.text('Resource Not Found', 404)
   })
 
-export type AppType = typeof route
+export type AppType = typeof app

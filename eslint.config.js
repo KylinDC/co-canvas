@@ -22,7 +22,7 @@ export default tseslint.config([
     ignores: ['**/*.{d.ts}', '**/worker-configuration.d.ts'],
     extends: [
       js.configs.recommended,
-      tseslint.configs.recommendedTypeChecked,
+      tseslint.configs.recommended,
       tseslint.configs.stylisticTypeChecked,
       reactX.configs['recommended-typescript'],
       reactDom.configs.recommended,

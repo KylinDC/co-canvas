@@ -1,9 +1,9 @@
+import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { v7 as uuidv7 } from 'uuid'
-import * as schema from './db/schema'
 
+import * as schema from './db/schema'
 import { rooms, userRooms } from './db/schema.ts'
-import { and, eq } from 'drizzle-orm'
 
 const getDB = (env: Env) => drizzle(env.DB, { schema })
 

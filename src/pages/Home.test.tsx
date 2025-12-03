@@ -1,10 +1,11 @@
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
 
-import { Home } from './Home'
 import * as userLib from '@/lib/user.ts'
 import { renderWithProviders } from '@/test-utils'
+
+import { Home } from './Home'
 
 const mockNavigate = vi.fn()
 

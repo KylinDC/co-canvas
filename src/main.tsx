@@ -1,10 +1,12 @@
+import './index.css'
+
+import { QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
 import { createBrowserRouter, RouterProvider } from 'react-router'
-import { Home } from './pages/Home.tsx'
-import { QueryClientProvider } from '@tanstack/react-query'
+
 import { queryClient } from '@/lib/api.ts'
+import { Home } from '@/pages/Home.tsx'
 import { Lobby } from '@/pages/Lobby.tsx'
 import { Room } from '@/pages/Room.tsx'
 

@@ -1,21 +1,24 @@
 import { QueryClient } from '@tanstack/react-query'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
 
-import { Lobby } from './Lobby'
 import * as apiLib from '@/lib/api.ts'
 import * as userLib from '@/lib/user.ts'
 import { renderWithProviders } from '@/test-utils'
+
+import { Lobby } from './Lobby'
 
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
 
 vi.mock('react-router', async () => {
-  const actual = await vi.importActual('react-router')
+  const actual =
+    await vi.importActual<typeof import('react-router')>('react-router')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+     
     useLocation: () => mockUseLocation(),
   }
 })
@@ -69,9 +72,9 @@ describe('Lobby', () => {
   })
 
   it('should show loading state while fetching room data', () => {
-    // Mock $get to return a promise that never resolves
     vi.mocked(apiLib.client.api.rooms.$get).mockReturnValue(
-      new Promise(() => {}) as any
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      new Promise<never>(() => {})
     )
 
     renderWithProviders(<Lobby />, { queryClient })
@@ -83,8 +86,9 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
+       
       json: async () => null,
-    } as any)
+    } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
 
@@ -104,8 +108,9 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 200,
+       
       json: async () => ({ roomId: 'existing-room-id' }),
-    } as any)
+    } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
 
@@ -125,8 +130,9 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 200,
+       
       json: async () => ({ roomId: 'existing-room-id' }),
-    } as any)
+    } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
 
@@ -150,14 +156,16 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
+       
       json: async () => null,
-    } as any)
+    } as never)
 
     vi.mocked(apiLib.client.api.rooms.$post).mockResolvedValue({
       ok: true,
       status: 200,
+       
       json: async () => ({ id: 'new-room-id' }),
-    } as any)
+    } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
 
@@ -189,8 +197,9 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
+       
       json: async () => null,
-    } as any)
+    } as never)
 
     vi.mocked(apiLib.client.api.rooms.$post).mockReturnValue(
       new Promise((resolve) => {
@@ -198,8 +207,9 @@ describe('Lobby', () => {
           resolve({
             ok: true,
             status: 200,
+             
             json: async () => ({ id: 'new-room-id' }),
-          } as any)
+          } as never)
         }, 100)
       })
     )
@@ -231,8 +241,9 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
+       
       json: async () => null,
-    } as any)
+    } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
 

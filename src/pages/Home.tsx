@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -15,20 +15,27 @@ import { getNewUserId, getUserId, getUserName, saveUser } from '@/lib/user.ts'
 
 export function Home() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [name, setName] = useState('')
   const [userExisted, setUserExisted] = useState(true)
+
+  const redirectUrl = searchParams.get('redirect')
 
   useEffect(() => {
     const userName = getUserName()
     const userId = getUserId()
 
     if (userId && userName) {
-      void navigate('/rooms', { state: { userId, userName } })
+      if (redirectUrl) {
+        void navigate(redirectUrl, { state: { userId, userName } })
+      } else {
+        void navigate('/rooms', { state: { userId, userName } })
+      }
     } else {
       setUserExisted(false)
     }
-  }, [navigate])
+  }, [navigate, redirectUrl])
 
   const handleCreateUser = (e: FormEvent) => {
     e.preventDefault()
@@ -36,9 +43,15 @@ export function Home() {
     if (newUserName) {
       const newUserId = getNewUserId()
       saveUser(newUserId, newUserName)
-      void navigate('/rooms', {
-        state: { userId: newUserId, userName: newUserName },
-      })
+      if (redirectUrl) {
+        void navigate(redirectUrl, {
+          state: { userId: newUserId, userName: newUserName },
+        })
+      } else {
+        void navigate('/rooms', {
+          state: { userId: newUserId, userName: newUserName },
+        })
+      }
     }
   }
 

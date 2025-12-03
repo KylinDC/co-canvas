@@ -27,6 +27,21 @@ vi.mock('@/lib/user.ts', () => ({
   getUserName: vi.fn(),
 }))
 
+const mockPost = vi.fn()
+vi.mock('@/lib/api.ts', () => ({
+  client: {
+    api: {
+      rooms: {
+        ':roomId': {
+          join: {
+            $post: (params: unknown) => mockPost(params),
+          },
+        },
+      },
+    },
+  },
+}))
+
 const mockUseSync = vi.fn()
 vi.mock('@tldraw/sync', () => ({
   useSync: (config: unknown) => mockUseSync(config),
@@ -47,6 +62,11 @@ describe('Room', () => {
     vi.mocked(userLib.getUserName).mockReturnValue('Test User')
     mockUseSync.mockReturnValue({ mockStore: true })
 
+    mockPost.mockResolvedValue({
+      ok: true,
+      json: async () => ({ roomId: 'test-room-id' }),
+    })
+
     Object.defineProperty(window, 'location', {
       value: {
         origin: 'http://localhost:5173',
@@ -63,7 +83,9 @@ describe('Room', () => {
     renderWithProviders(<Room />)
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/')
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/?redirect=%2Frooms%2Ftest-room-id'
+      )
     })
   })
 
@@ -74,7 +96,9 @@ describe('Room', () => {
     renderWithProviders(<Room />)
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/')
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/?redirect=%2Frooms%2Ftest-room-id'
+      )
     })
   })
 
@@ -85,7 +109,9 @@ describe('Room', () => {
     renderWithProviders(<Room />)
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/')
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/?redirect=%2Frooms%2Ftest-room-id'
+      )
     })
   })
 
@@ -165,29 +191,7 @@ describe('Room', () => {
     ).toBeInTheDocument()
   })
 
-  it('should copy room link to clipboard when copy button is clicked', async () => {
-    const user = userEvent.setup()
-    const mockWriteText = vi.fn().mockResolvedValue(undefined)
-
-    Object.defineProperty(navigator, 'clipboard', {
-      value: {
-        writeText: mockWriteText,
-      },
-      writable: true,
-      configurable: true,
-    })
-
-    renderWithProviders(<Room />)
-
-    const copyButton = screen.getByRole('button', { name: 'copy room link' })
-    await user.click(copyButton)
-
-    expect(mockWriteText).toHaveBeenCalledWith(
-      'http://localhost:5173/rooms/test-room-id'
-    )
-  })
-
-  it('should show "Copied!" message after copying link', async () => {
+  it('should copy room link to clipboard when copy button is clicked and show "Copied!" message ', async () => {
     const user = userEvent.setup()
     const mockWriteText = vi.fn().mockResolvedValue(undefined)
 
@@ -205,6 +209,9 @@ describe('Room', () => {
     await user.click(copyButton)
 
     expect(screen.getByText('Copied!')).toBeInTheDocument()
+    expect(mockWriteText).toHaveBeenCalledWith(
+      'http://localhost:5173/rooms/test-room-id'
+    )
   })
 
   it('should hide "Copied!" message after 3 seconds', () => {
@@ -255,5 +262,179 @@ describe('Room', () => {
         uri: expect.stringContaining('https://example.com/api/rooms/'),
       })
     )
+  })
+
+  describe('Error Handling', () => {
+    it('should display error card when user has already joined another room', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage:
+            'User already joined another room with roomId: existing-room-123',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+      })
+
+      expect(
+        screen.getByText('You have already joined another room')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'User already joined another room with roomId: existing-room-123'
+        )
+      ).toBeInTheDocument()
+    })
+
+    it('should display "Return to Lobby" button on error', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage: 'User already joined another room with roomId: abc123',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: 'Return to Lobby' })
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('should navigate to lobby when "Return to Lobby" button is clicked', async () => {
+      const user = userEvent.setup()
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage: 'User already joined another room with roomId: abc123',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+      })
+
+      const returnButton = screen.getByRole('button', {
+        name: 'Return to Lobby',
+      })
+      await user.click(returnButton)
+
+      expect(mockNavigate).toHaveBeenCalledWith('/rooms')
+    })
+
+    it('should display "Go to Current Room" button when existing room ID is available', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage:
+            'User already joined another room with roomId: existing-room-456',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: 'Go to Current Room' })
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('should navigate to existing room when "Go to Current Room" button is clicked', async () => {
+      const user = userEvent.setup()
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage:
+            'User already joined another room with roomId: existing-room-789',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+      })
+
+      const goToRoomButton = screen.getByRole('button', {
+        name: 'Go to Current Room',
+      })
+      await user.click(goToRoomButton)
+
+      expect(mockNavigate).toHaveBeenCalledWith('/rooms/existing-room-789')
+    })
+
+    it('should not display "Go to Current Room" button when room ID cannot be extracted', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage: 'User already joined another room',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+      })
+
+      expect(
+        screen.queryByRole('button', { name: 'Go to Current Room' })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Return to Lobby' })
+      ).toBeInTheDocument()
+    })
+
+    it('should not render Tldraw when error is displayed', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          errorMessage: 'User already joined another room with roomId: abc123',
+        }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('tldraw')).not.toBeInTheDocument()
+    })
+
+    it('should handle API errors without error message gracefully', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+      })
+
+      expect(screen.getByText('Failed to join room')).toBeInTheDocument()
+    })
+
+    it('should call join room API with correct parameters', async () => {
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith({
+          param: { roomId: 'test-room-id' },
+          json: { userId: 'test-user-id' },
+        })
+      })
+    })
   })
 })

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { v7 as uuidv7 } from 'uuid'
 
@@ -28,13 +28,6 @@ export const joinRoom = async (
   roomId: string,
   asHost = false
 ) => {
-  const userRoom = await getDB(env).query.userRooms.findFirst({
-    where: and(eq(userRooms.userId, userId), eq(userRooms.roomId, roomId)),
-  })
-  if (userRoom) {
-    return [{ id: userRoom.roomId }]
-  }
-
   return getDB(env)
     .insert(userRooms)
     .values({
@@ -42,6 +35,10 @@ export const joinRoom = async (
       userId,
       roomId,
       isHost: asHost,
+    })
+    .onConflictDoUpdate({
+      target: userRooms.userId,
+      set: { updatedAt: sql.raw(`CURRENT_TIMESTAMP`) },
     })
     .returning({ id: userRooms.roomId })
 }
@@ -54,6 +51,7 @@ export const getRoomWithUserId = async (env: Env, userId: string) => {
     where: eq(userRooms.userId, userId),
   })
 }
+
 export const getRoom = async (env: Env, id: string) => {
   return getDB(env).query.rooms.findFirst({
     where: eq(rooms.id, id),

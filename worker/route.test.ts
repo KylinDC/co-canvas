@@ -167,4 +167,270 @@ describe('route', () => {
       expect(createdRooms).toHaveLength(2)
     })
   })
+
+  describe('POST /api/rooms/:roomId/join', () => {
+    it('should allow user to join an existing room', async () => {
+      const hostUserId = uuidv7()
+      const guestUserId = uuidv7()
+
+      const createResponse = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+            name: 'Test Room',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId } = await createResponse.json<{ id: string }>()
+
+      const joinResponse = await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: guestUserId,
+          }),
+        },
+        env
+      )
+
+      expect(joinResponse.status).toBe(200)
+
+      const json = await joinResponse.json<{ roomId: string }>()
+      expect(json.roomId).toBe(roomId)
+
+      const db = drizzle(env.DB)
+      const joinedRooms = await db.select().from(userRooms)
+      expect(joinedRooms).toHaveLength(2)
+      expect(joinedRooms.some((ur) => ur.userId === guestUserId)).toBe(true)
+      expect(joinedRooms.some((ur) => ur.userId === hostUserId)).toBe(true)
+    })
+
+    it('should return 404 when room does not exist', async () => {
+      const userId = uuidv7()
+      const nonExistentRoomId = uuidv7()
+
+      const response = await app.request(
+        `/api/rooms/${nonExistentRoomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+          }),
+        },
+        env
+      )
+
+      expect(response.status).toBe(404)
+    })
+
+    it('should return 400 when user already joined another room', async () => {
+      const userId = uuidv7()
+
+      const createResponse1 = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            name: 'Room 1',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId1 } = await createResponse1.json<{ id: string }>()
+
+      const hostUserId2 = uuidv7()
+      const createResponse2 = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId2,
+            name: 'Room 2',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId2 } = await createResponse2.json<{ id: string }>()
+
+      const joinResponse = await app.request(
+        `/api/rooms/${roomId2}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+          }),
+        },
+        env
+      )
+
+      expect(joinResponse.status).toBe(400)
+
+      const json = await joinResponse.json<{ errorMessage: string }>()
+      expect(json.errorMessage).toBe(
+        `User already joined another room with roomId: ${roomId1}`
+      )
+    })
+
+    it('should allow user to rejoin the same room', async () => {
+      const userId = uuidv7()
+
+      const createResponse = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            name: 'Test Room',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId } = await createResponse.json<{ id: string }>()
+
+      const rejoinResponse = await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+          }),
+        },
+        env
+      )
+
+      expect(rejoinResponse.status).toBe(200)
+
+      const json = await rejoinResponse.json<{ roomId: string }>()
+      expect(json.roomId).toBe(roomId)
+
+      const db = drizzle(env.DB)
+      const joinedRooms = await db.select().from(userRooms)
+      expect(joinedRooms).toHaveLength(1)
+    })
+
+    it('should reject request with invalid roomId', async () => {
+      const userId = uuidv7()
+
+      const response = await app.request(
+        '/api/rooms/invalid-room-id/join',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+          }),
+        },
+        env
+      )
+
+      expect(response.status).toBe(400)
+    })
+
+    it('should reject request with invalid userId', async () => {
+      const hostUserId = uuidv7()
+
+      const createResponse = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+            name: 'Test Room',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId } = await createResponse.json<{ id: string }>()
+
+      const response = await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: 'invalid-user-id',
+          }),
+        },
+        env
+      )
+
+      expect(response.status).toBe(400)
+    })
+
+    it('should reject request with missing userId', async () => {
+      const hostUserId = uuidv7()
+
+      const createResponse = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+            name: 'Test Room',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId } = await createResponse.json<{ id: string }>()
+
+      const response = await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        },
+        env
+      )
+
+      expect(response.status).toBe(400)
+    })
+  })
 })

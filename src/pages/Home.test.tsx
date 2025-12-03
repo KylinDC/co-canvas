@@ -9,11 +9,14 @@ import { Home } from './Home'
 
 const mockNavigate = vi.fn()
 
+const mockUseSearchParams = vi.fn()
+
 vi.mock('react-router', async () => {
   const actual = await vi.importActual('react-router')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useSearchParams: () => mockUseSearchParams(),
   }
 })
 
@@ -30,6 +33,9 @@ describe('Home', () => {
     vi.mocked(userLib.getUserId).mockReturnValue(null)
     vi.mocked(userLib.getUserName).mockReturnValue(null)
     vi.mocked(userLib.getNewUserId).mockReturnValue('test-user-id')
+
+    const mockSearchParams = new URLSearchParams()
+    mockUseSearchParams.mockReturnValue([mockSearchParams])
   })
 
   it('should render welcome card when no user exists', () => {
@@ -128,5 +134,83 @@ describe('Home', () => {
     expect(nameInput).toHaveValue('')
     expect(userLib.saveUser).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  describe('Redirect parameter handling', () => {
+    it('should redirect existing user to specified redirect URL', async () => {
+      vi.mocked(userLib.getUserId).mockReturnValue('existing-user-id')
+      vi.mocked(userLib.getUserName).mockReturnValue('John Doe')
+
+      const mockSearchParams = new URLSearchParams()
+      mockSearchParams.set('redirect', '/rooms/test-room-123')
+      mockUseSearchParams.mockReturnValue([mockSearchParams])
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/rooms/test-room-123', {
+          state: { userId: 'existing-user-id', userName: 'John Doe' },
+        })
+      })
+    })
+
+    it('should redirect new user to specified redirect URL after creation', async () => {
+      const user = userEvent.setup()
+
+      const mockSearchParams = new URLSearchParams()
+      mockSearchParams.set('redirect', '/rooms/test-room-456')
+      mockUseSearchParams.mockReturnValue([mockSearchParams])
+
+      renderWithProviders(<Home />)
+
+      const nameInput = screen.getByLabelText('Name')
+      const submitButton = screen.getByRole('button', { name: 'Continue' })
+
+      await user.type(nameInput, 'Jane Doe')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(userLib.saveUser).toHaveBeenCalledWith(
+          'test-user-id',
+          'Jane Doe'
+        )
+        expect(mockNavigate).toHaveBeenCalledWith('/rooms/test-room-456', {
+          state: { userId: 'test-user-id', userName: 'Jane Doe' },
+        })
+      })
+    })
+
+    it('should handle encoded redirect URL', async () => {
+      vi.mocked(userLib.getUserId).mockReturnValue('existing-user-id')
+      vi.mocked(userLib.getUserName).mockReturnValue('John Doe')
+
+      const mockSearchParams = new URLSearchParams()
+      mockSearchParams.set('redirect', '%2Frooms%2Ftest-room-789')
+      mockUseSearchParams.mockReturnValue([mockSearchParams])
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('%2Frooms%2Ftest-room-789', {
+          state: { userId: 'existing-user-id', userName: 'John Doe' },
+        })
+      })
+    })
+
+    it('should navigate to /rooms when no redirect parameter exists', async () => {
+      vi.mocked(userLib.getUserId).mockReturnValue('existing-user-id')
+      vi.mocked(userLib.getUserName).mockReturnValue('John Doe')
+
+      const mockSearchParams = new URLSearchParams()
+      mockUseSearchParams.mockReturnValue([mockSearchParams])
+
+      renderWithProviders(<Home />)
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/rooms', {
+          state: { userId: 'existing-user-id', userName: 'John Doe' },
+        })
+      })
+    })
   })
 })

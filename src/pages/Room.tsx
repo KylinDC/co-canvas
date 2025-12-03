@@ -270,18 +270,18 @@ function RoomWrapper({
     <div className='RoomWrapper'>
       <div className='RoomWrapper-header'>
         <div>{roomName}</div>
-        <button
+        <Button
           type='button'
-          className='RoomWrapper-copy'
+          variant='outline'
+          size='sm'
           onClick={() => {
             void navigator.clipboard.writeText(window.location.href)
             setDidCopy(true)
           }}
           aria-label='copy room link'
         >
-          Copy link
-          {didCopy && <div className='RoomWrapper-copied'>Copied!</div>}
-        </button>
+          {didCopy ? 'Copied!' : 'Copy link'}
+        </Button>
       </div>
       <div className='RoomWrapper-content'>{children}</div>
     </div>

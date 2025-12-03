@@ -18,7 +18,7 @@ vi.mock('react-router', async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-     
+
     useLocation: () => mockUseLocation(),
   }
 })
@@ -86,7 +86,7 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
-       
+
       json: async () => null,
     } as never)
 
@@ -108,7 +108,7 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 200,
-       
+
       json: async () => ({ roomId: 'existing-room-id' }),
     } as never)
 
@@ -130,7 +130,7 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 200,
-       
+
       json: async () => ({ roomId: 'existing-room-id' }),
     } as never)
 
@@ -156,14 +156,14 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
-       
+
       json: async () => null,
     } as never)
 
     vi.mocked(apiLib.client.api.rooms.$post).mockResolvedValue({
       ok: true,
       status: 200,
-       
+
       json: async () => ({ id: 'new-room-id' }),
     } as never)
 
@@ -197,7 +197,7 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
-       
+
       json: async () => null,
     } as never)
 
@@ -207,7 +207,7 @@ describe('Lobby', () => {
           resolve({
             ok: true,
             status: 200,
-             
+
             json: async () => ({ id: 'new-room-id' }),
           } as never)
         }, 100)
@@ -241,7 +241,7 @@ describe('Lobby', () => {
     vi.mocked(apiLib.client.api.rooms.$get).mockResolvedValue({
       ok: true,
       status: 404,
-       
+
       json: async () => null,
     } as never)
 

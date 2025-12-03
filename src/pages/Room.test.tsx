@@ -16,7 +16,7 @@ vi.mock('react-router', async () => {
     await vi.importActual<typeof import('react-router')>('react-router')
   return {
     ...actual,
-    useNavigate: () => mockNavigate(),
+    useNavigate: () => mockNavigate,
     useParams: () => mockUseParams(),
     useLocation: () => mockUseLocation(),
   }

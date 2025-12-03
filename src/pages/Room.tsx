@@ -9,7 +9,6 @@ import { getUserId, getUserName } from '@/lib/user.ts'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const multiplayerAssetStore: TLAssetStore = {
-   
   async upload() {
     const url = `${window.location.origin}/api/uploads`
     return { src: url }

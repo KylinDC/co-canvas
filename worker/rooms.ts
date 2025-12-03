@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { v7 as uuidv7 } from 'uuid'
 
@@ -59,4 +59,10 @@ export const getRoom = async (env: Env, id: string) => {
   return getDB(env).query.rooms.findFirst({
     where: eq(rooms.id, id),
   })
+}
+
+export const exitRoom = async (env: Env, userId: string, roomId: string) => {
+  return getDB(env)
+    .delete(userRooms)
+    .where(and(eq(userRooms.roomId, roomId), eq(userRooms.userId, userId)))
 }

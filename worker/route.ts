@@ -2,7 +2,13 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { createRoom, getRoom, getRoomWithUserId, joinRoom } from './rooms.ts'
+import {
+  createRoom,
+  exitRoom,
+  getRoom,
+  getRoomWithUserId,
+  joinRoom,
+} from './rooms.ts'
 import { createRoomReq, getRoomWithUserIdReq, joinRoomReq } from './schemas.ts'
 
 export const app = new Hono<{ Bindings: Env }>()
@@ -56,6 +62,27 @@ export const app = new Hono<{ Bindings: Env }>()
       await joinRoom(env, userId, roomId)
 
       return json({ roomId })
+    }
+  )
+  .post(
+    '/api/rooms/:roomId/exit',
+    zValidator('param', z.object({ roomId: z.uuidv7() })),
+    zValidator('json', z.object({ userId: z.uuidv7() })),
+    async (ctx) => {
+      const { env, req, body, notFound } = ctx
+
+      const { roomId } = req.valid('param')
+      const { userId } = req.valid('json')
+
+      const room = await getRoom(env, roomId)
+
+      if (!room) {
+        return notFound()
+      }
+
+      await exitRoom(env, userId, roomId)
+
+      return body(null)
     }
   )
   .get(

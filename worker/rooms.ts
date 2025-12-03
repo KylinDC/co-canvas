@@ -44,12 +44,15 @@ export const joinRoom = async (
 }
 
 export const getRoomWithUserId = async (env: Env, userId: string) => {
-  return getDB(env).query.userRooms.findFirst({
-    columns: {
-      roomId: true,
-    },
-    where: eq(userRooms.userId, userId),
-  })
+  return getDB(env)
+    .select({
+      roomId: rooms.id,
+      roomName: rooms.name,
+    })
+    .from(userRooms)
+    .leftJoin(rooms, eq(userRooms.roomId, rooms.id))
+    .where(eq(userRooms.userId, userId))
+    .limit(1)
 }
 
 export const getRoom = async (env: Env, id: string) => {

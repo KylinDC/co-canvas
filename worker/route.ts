@@ -25,7 +25,7 @@ export const app = new Hono<{ Bindings: Env }>()
       return notFound()
     }
 
-    return json({ roomId: userRoom.roomId })
+    return json({ roomId: userRoom[0].roomId, roomName: userRoom[0].roomName })
   })
   .post(
     '/api/rooms/:roomId/join',
@@ -44,10 +44,10 @@ export const app = new Hono<{ Bindings: Env }>()
       }
 
       const currentUserRoom = await getRoomWithUserId(env, userId)
-      if (currentUserRoom && currentUserRoom.roomId !== roomId) {
+      if (currentUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
         return json(
           {
-            errorMessage: `User already joined another room with roomId: ${currentUserRoom.roomId}`,
+            errorMessage: `User already joined another room with roomId: ${currentUserRoom[0].roomId}`,
           },
           400
         )
@@ -56,6 +56,23 @@ export const app = new Hono<{ Bindings: Env }>()
       await joinRoom(env, userId, roomId)
 
       return json({ roomId })
+    }
+  )
+  .get(
+    '/api/rooms/:roomId',
+    zValidator('param', z.object({ roomId: z.uuidv7() })),
+    async (ctx) => {
+      const { env, req, notFound, json } = ctx
+
+      const { roomId } = req.valid('param')
+
+      const room = await getRoom(env, roomId)
+
+      if (!room) {
+        return notFound()
+      }
+
+      return json({ id: room.id, name: room.name })
     }
   )
   .get(

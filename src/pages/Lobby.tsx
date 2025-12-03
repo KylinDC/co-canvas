@@ -42,7 +42,7 @@ export const Lobby = () => {
         throw new Error(res.statusText)
       }
       const json = await res.json()
-      return json as { roomId: string }
+      return json as { roomId: string; roomName: string }
     },
     enabled: !!userId,
     retry: false,
@@ -72,7 +72,7 @@ export const Lobby = () => {
   const handleEnterRoom = () => {
     if (roomData?.roomId) {
       void navigate(`/rooms/${roomData.roomId}`, {
-        state: { userId, userName },
+        state: { userId, userName, roomName: roomData.roomName },
       })
     }
   }

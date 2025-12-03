@@ -28,6 +28,7 @@ vi.mock('@/lib/user.ts', () => ({
 }))
 
 const mockPost = vi.fn()
+const mockGet = vi.fn()
 vi.mock('@/lib/api.ts', () => ({
   client: {
     api: {
@@ -36,6 +37,7 @@ vi.mock('@/lib/api.ts', () => ({
           join: {
             $post: (params: unknown) => mockPost(params),
           },
+          $get: (params: unknown) => mockGet(params),
         },
       },
     },
@@ -65,6 +67,11 @@ describe('Room', () => {
     mockPost.mockResolvedValue({
       ok: true,
       json: async () => ({ roomId: 'test-room-id' }),
+    })
+
+    mockGet.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'test-room-id', name: 'Test Room' }),
     })
 
     Object.defineProperty(window, 'location', {
@@ -175,14 +182,6 @@ describe('Room', () => {
     expect(screen.getByText('Tldraw Loaded')).toBeInTheDocument()
   })
 
-  it('should display room ID in header', () => {
-    mockUseParams.mockReturnValue({ roomId: 'my-test-room' })
-
-    renderWithProviders(<Room />)
-
-    expect(screen.getByText('my-test-room')).toBeInTheDocument()
-  })
-
   it('should display copy link button', () => {
     renderWithProviders(<Room />)
 
@@ -282,11 +281,6 @@ describe('Room', () => {
 
       expect(
         screen.getByText('You have already joined another room')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(
-          'User already joined another room with roomId: existing-room-123'
-        )
       ).toBeInTheDocument()
     })
 
@@ -420,7 +414,7 @@ describe('Room', () => {
       renderWithProviders(<Room />)
 
       await waitFor(() => {
-        expect(screen.getByText('Unable to Join Room')).toBeInTheDocument()
+        expect(screen.getByText('Server Error')).toBeInTheDocument()
       })
 
       expect(screen.getByText('Failed to join room')).toBeInTheDocument()
@@ -434,6 +428,206 @@ describe('Room', () => {
           param: { roomId: 'test-room-id' },
           json: { userId: 'test-user-id' },
         })
+      })
+    })
+  })
+
+  describe('404 Error Handling', () => {
+    it('should display 404 error card when room does not exist (from join)', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ errorMessage: 'Room not found' }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Room Not Found')).toBeInTheDocument()
+      })
+
+      expect(
+        screen.getByText('The room you are trying to access does not exist')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Return to Lobby' })
+      ).toBeInTheDocument()
+    })
+
+    it('should display 404 error card when room does not exist (from query)', async () => {
+      mockUseLocation.mockReturnValue({
+        state: { userId: 'test-user-id', userName: 'Test User' },
+      })
+
+      mockGet.mockResolvedValue({
+        ok: false,
+        status: 404,
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Room Not Found')).toBeInTheDocument()
+      })
+    })
+
+    it('should navigate to lobby when clicking Return to Lobby on 404 error', async () => {
+      const user = userEvent.setup()
+
+      mockPost.mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ errorMessage: 'Room not found' }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Room Not Found')).toBeInTheDocument()
+      })
+
+      const returnButton = screen.getByRole('button', {
+        name: 'Return to Lobby',
+      })
+      await user.click(returnButton)
+
+      expect(mockNavigate).toHaveBeenCalledWith('/rooms')
+    })
+  })
+
+  describe('500 Error Handling', () => {
+    it('should display 500 error card when server error occurs (from join)', async () => {
+      mockPost.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ errorMessage: 'Internal server error' }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Server Error')).toBeInTheDocument()
+      })
+
+      expect(
+        screen.getByText('Something went wrong on our end')
+      ).toBeInTheDocument()
+      expect(screen.getByText('Server error occurred')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Return to Lobby' })
+      ).toBeInTheDocument()
+    })
+
+    it('should display 500 error card when server error occurs (from query)', async () => {
+      mockUseLocation.mockReturnValue({
+        state: { userId: 'test-user-id', userName: 'Test User' },
+      })
+
+      mockGet.mockResolvedValue({
+        ok: false,
+        status: 503,
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Server Error')).toBeInTheDocument()
+      })
+    })
+
+    it('should navigate to lobby when clicking Return to Lobby on 500 error', async () => {
+      const user = userEvent.setup()
+
+      mockPost.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ errorMessage: 'Internal server error' }),
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Server Error')).toBeInTheDocument()
+      })
+
+      const returnButton = screen.getByRole('button', {
+        name: 'Return to Lobby',
+      })
+      await user.click(returnButton)
+
+      expect(mockNavigate).toHaveBeenCalledWith('/rooms')
+    })
+  })
+
+  describe('Room name handling', () => {
+    it('should display room name from location state if available', async () => {
+      mockUseLocation.mockReturnValue({
+        state: {
+          userId: 'test-user-id',
+          userName: 'Test User',
+          roomName: 'My Custom Room',
+        },
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('My Custom Room')).toBeInTheDocument()
+      })
+
+      expect(mockGet).not.toHaveBeenCalled()
+    })
+
+    it('should fetch room name from API when not in location state', async () => {
+      mockUseLocation.mockReturnValue({
+        state: { userId: 'test-user-id', userName: 'Test User' },
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(mockGet).toHaveBeenCalledWith({
+          param: { roomId: 'test-room-id' },
+        })
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Room')).toBeInTheDocument()
+      })
+    })
+
+    it('should not fetch room data when room name is provided in state', async () => {
+      mockUseLocation.mockReturnValue({
+        state: {
+          userId: 'test-user-id',
+          userName: 'Test User',
+          roomName: 'State Room Name',
+        },
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tldraw')).toBeInTheDocument()
+      })
+
+      expect(mockGet).not.toHaveBeenCalled()
+    })
+
+    it('should display 404 error when room does not exist', async () => {
+      mockUseLocation.mockReturnValue({
+        state: { userId: 'test-user-id', userName: 'Test User' },
+      })
+
+      mockGet.mockResolvedValue({
+        ok: false,
+        status: 404,
+      })
+
+      renderWithProviders(<Room />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Room Not Found')).toBeInTheDocument()
       })
     })
   })

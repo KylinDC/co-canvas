@@ -131,6 +131,14 @@ export const app = new Hono<{ Bindings: Env }>()
 
       await closeRoom(env, roomId)
 
+      const doId = env.ROOM_DO.idFromString(room.doId)
+      const roomStub = env.ROOM_DO.get(doId)
+      await roomStub.fetch(
+        new Request(`${req.url.split('/close')[0]}/broadcast-close`, {
+          method: 'POST',
+        })
+      )
+
       return body(null)
     }
   )

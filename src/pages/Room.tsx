@@ -2,14 +2,22 @@ import './room.css'
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useSync } from '@tldraw/sync'
-import { type ReactNode, useEffect, useState } from 'react'
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   type NavigateFunction,
   useLocation,
   useNavigate,
   useParams,
 } from 'react-router'
-import { type TLAssetStore, Tldraw } from 'tldraw'
+import { toast,Toaster } from 'sonner'
+import { type Editor, type TLAssetStore, Tldraw } from 'tldraw'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -69,6 +77,7 @@ export function Room() {
   >(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [existingRoomId, setExistingRoomId] = useState<string | null>(null)
+  const editorRef = useRef<Editor | null>(null)
 
   const { data: userRoomData } = useQuery({
     queryKey: ['user-room', userId],
@@ -100,7 +109,7 @@ export function Room() {
   const currentRoomData = userRoomData?.find((room) => room.roomId === roomId)
   const roomName = roomNameFromState ?? currentRoomData?.roomName
   const isCurrentUserHost = currentRoomData?.isCurrentUserHost ?? false
-  const isRoomOpen = currentRoomData?.isOpen ?? true
+  const isRoomOpen = currentRoomData?.isOpen ?? false
 
   const joinRoomMutation = useMutation({
     mutationFn: async () => {
@@ -215,6 +224,7 @@ export function Room() {
     }
   }, [userId, roomId])
 
+  // eslint-ignore
   // biome-ignore lint/correctness/useExhaustiveDependencies: force to refresh
   useEffect(() => {
     setErrorType(null)
@@ -222,10 +232,38 @@ export function Room() {
     setExistingRoomId(null)
   }, [roomId])
 
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateInstanceState({ isReadonly: !isRoomOpen })
+    }
+  }, [isRoomOpen])
+
+  const handleCustomMessage = useCallback(
+    (data: { type: string; message?: string }) => {
+      if (data.type === 'room-closed') {
+        toast.warning('Room has been closed', {
+          description:
+            'Room has been closed by host, you should not update the canva',
+        })
+
+        if (editorRef.current) {
+          editorRef.current.updateInstanceState({ isReadonly: true })
+        }
+      }
+    },
+    []
+  )
+
+  const userInfo = useMemo(
+    () => ({ id: userId ?? '', name: userName }),
+    [userId, userName]
+  )
+
   const store = useSync({
     uri: `${window.location.origin}/api/rooms/${roomId}/connect?userId=${userId}`,
     assets: multiplayerAssetStore,
-    userInfo: { id: userId ?? '', name: userName },
+    userInfo,
+    onCustomMessageReceived: handleCustomMessage,
   })
 
   if (errorType === '404') {
@@ -296,17 +334,27 @@ export function Room() {
   }
 
   return (
-    <RoomWrapper
-      roomId={roomId}
-      roomName={roomName}
-      navigate={navigate}
-      isCurrentUserHost={isCurrentUserHost}
-      isRoomActive={isRoomOpen}
-      onLeaveRoom={() => leaveRoomMutation.mutate()}
-      onCloseRoom={() => closeRoomMutation.mutate()}
-    >
-      <Tldraw store={store} deepLinks />
-    </RoomWrapper>
+    <>
+      <RoomWrapper
+        roomId={roomId}
+        roomName={roomName}
+        navigate={navigate}
+        isCurrentUserHost={isCurrentUserHost}
+        isRoomOpen={isRoomOpen}
+        onLeaveRoom={() => leaveRoomMutation.mutate()}
+        onCloseRoom={() => closeRoomMutation.mutate()}
+      >
+        <Tldraw
+          store={store}
+          deepLinks
+          onMount={(editor) => {
+            editorRef.current = editor
+            editor.updateInstanceState({ isReadonly: !isRoomOpen })
+          }}
+        />
+      </RoomWrapper>
+      <Toaster />
+    </>
   )
 }
 
@@ -315,7 +363,7 @@ function RoomWrapper({
   roomName,
   navigate,
   isCurrentUserHost,
-  isRoomActive,
+  isRoomOpen,
   onLeaveRoom,
   onCloseRoom,
 }: {
@@ -324,7 +372,7 @@ function RoomWrapper({
   roomName?: string
   navigate: NavigateFunction
   isCurrentUserHost: boolean
-  isRoomActive: boolean
+  isRoomOpen: boolean
   onLeaveRoom: () => void
   onCloseRoom: () => void
 }) {
@@ -376,7 +424,7 @@ function RoomWrapper({
               size='sm'
               onClick={onCloseRoom}
               aria-label='close room'
-              disabled={!isRoomActive}
+              disabled={!isRoomOpen}
             >
               Close Room
             </Button>
@@ -387,7 +435,7 @@ function RoomWrapper({
               size='sm'
               onClick={onLeaveRoom}
               aria-label='leave room'
-              disabled={!isRoomActive}
+              disabled={!isRoomOpen}
             >
               Leave Room
             </Button>

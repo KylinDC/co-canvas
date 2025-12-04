@@ -431,5 +431,136 @@ describe('route', () => {
 
       expect(response.status).toBe(400)
     })
+
+    it('should reject new user trying to join a closed room', async () => {
+      const hostUserId = uuidv7()
+      const newUserId = uuidv7()
+
+      // Create a room
+      const createResponse = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+            name: 'Test Room',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId } = await createResponse.json<{ id: string }>()
+
+      // Close the room
+      await app.request(
+        `/api/rooms/${roomId}/close`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+          }),
+        },
+        env
+      )
+
+      // Try to join as new user
+      const joinResponse = await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: newUserId,
+          }),
+        },
+        env
+      )
+
+      expect(joinResponse.status).toBe(400)
+
+      const json = await joinResponse.json<{ errorMessage: string }>()
+      expect(json.errorMessage).toBe('Room has been closed')
+    })
+
+    it('should allow existing member to rejoin a closed room', async () => {
+      const hostUserId = uuidv7()
+      const memberUserId = uuidv7()
+
+      // Create a room
+      const createResponse = await app.request(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+            name: 'Test Room',
+          }),
+        },
+        env
+      )
+
+      const { id: roomId } = await createResponse.json<{ id: string }>()
+
+      // Member joins the room
+      await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: memberUserId,
+          }),
+        },
+        env
+      )
+
+      // Close the room
+      await app.request(
+        `/api/rooms/${roomId}/close`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: hostUserId,
+          }),
+        },
+        env
+      )
+
+      // Member should be able to rejoin
+      const rejoinResponse = await app.request(
+        `/api/rooms/${roomId}/join`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: memberUserId,
+          }),
+        },
+        env
+      )
+
+      expect(rejoinResponse.status).toBe(200)
+
+      const json = await rejoinResponse.json<{ roomId: string }>()
+      expect(json.roomId).toBe(roomId)
+    })
   })
 })

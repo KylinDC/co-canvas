@@ -17,8 +17,7 @@ export class RoomDO extends DurableObject<Env> {
   private bucket: R2Bucket
   private roomId: string | null = null
   private roomPromise: Promise<TLSocketRoom<TLRecord, void>> | null = null
-  private userSessions =
-    new Map<string, { userId: string; userName: string }>()
+  private userSessions = new Map<string, { userId: string; userName: string }>()
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)

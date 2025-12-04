@@ -16,7 +16,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router'
-import { toast,Toaster } from 'sonner'
+import { toast, Toaster } from 'sonner'
 import { type Editor, type TLAssetStore, Tldraw } from 'tldraw'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'

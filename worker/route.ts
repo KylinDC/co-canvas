@@ -84,10 +84,11 @@ export const app = new Hono<{ Bindings: Env }>()
         )
       }
 
-      if (!room.isOpen && currentUserRoom.length) {
+      if (!room.isOpen && !currentUserRoom.some((ur) => ur.roomId === roomId)) {
         return json({ errorMessage: `Room has been closed` }, 400)
       }
 
+      await joinRoom(env, userId, roomId)
       return json({ roomId })
     }
   )
@@ -129,17 +130,26 @@ export const app = new Hono<{ Bindings: Env }>()
       }
 
       if (room.hostId !== userId) {
-        json({ errorMessage: 'Only host can close room' }, 400)
+        return json({ errorMessage: 'Only host can close room' }, 400)
       }
 
       await closeRoom(env, roomId)
 
-      const doId = env.ROOM_DO.idFromString(room.doId)
-      const roomStub = env.ROOM_DO.get(doId)
-      await roomStub.fetch(
-        new Request(`${req.url.split('/close')[0]}/broadcast-close`, {
-          method: 'POST',
-        })
+      // Fire-and-forget broadcast to avoid blocking response and test cleanup
+      ctx.executionCtx.waitUntil(
+        (async () => {
+          try {
+            const doId = env.ROOM_DO.idFromString(room.doId)
+            const roomStub = env.ROOM_DO.get(doId)
+            await roomStub.fetch(
+              new Request(`${req.url.split('/close')[0]}/broadcast-close`, {
+                method: 'POST',
+              })
+            )
+          } catch (error) {
+            console.error('Failed to broadcast room close:', error)
+          }
+        })()
       )
 
       return body(null)

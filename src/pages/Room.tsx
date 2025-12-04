@@ -16,7 +16,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router'
-import { toast,Toaster } from 'sonner'
+import { toast, Toaster } from 'sonner'
 import { type Editor, type TLAssetStore, Tldraw } from 'tldraw'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -239,7 +239,7 @@ export function Room() {
   }, [isRoomOpen])
 
   const handleCustomMessage = useCallback(
-    (data: { type: string; message?: string }) => {
+    (data: { type: string; userName?: string; message?: string }) => {
       if (data.type === 'room-closed') {
         toast.warning('Room has been closed', {
           description:
@@ -249,6 +249,10 @@ export function Room() {
         if (editorRef.current) {
           editorRef.current.updateInstanceState({ isReadonly: true })
         }
+      } else if (data.type === 'user-joined' && data.userName) {
+        toast.info(`${data.userName} joined the room`)
+      } else if (data.type === 'user-left' && data.userName) {
+        toast.info(`${data.userName} left the room`)
       }
     },
     []
@@ -260,7 +264,7 @@ export function Room() {
   )
 
   const store = useSync({
-    uri: `${window.location.origin}/api/rooms/${roomId}/connect?userId=${userId}`,
+    uri: `${window.location.origin}/api/rooms/${roomId}/connect?userId=${userId}&userName=${encodeURIComponent(userName ?? '')}`,
     assets: multiplayerAssetStore,
     userInfo,
     onCustomMessageReceived: handleCustomMessage,

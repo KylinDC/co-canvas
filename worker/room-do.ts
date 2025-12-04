@@ -17,6 +17,8 @@ export class RoomDO extends DurableObject<Env> {
   private bucket: R2Bucket
   private roomId: string | null = null
   private roomPromise: Promise<TLSocketRoom<TLRecord, void>> | null = null
+  private userSessions =
+    new Map<string, { userId: string; userName: string }>()
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -40,12 +42,23 @@ export class RoomDO extends DurableObject<Env> {
       const { req, text } = ctx
       const roomId = req.param('roomId')
       const sessionId = req.query('sessionId')
+      const userId = req.query('userId')
+      const userName = req.query('userName')
 
       if (!sessionId) {
         return text('Missing sessionId query parameter', 400)
       }
 
-      const clientWebSocket = await this.handleConnect(roomId, sessionId)
+      if (!userId || !userName) {
+        return text('Missing userId or userName query parameter', 400)
+      }
+
+      const clientWebSocket = await this.handleConnect(
+        roomId,
+        sessionId,
+        userId,
+        userName
+      )
       return new Response(null, { status: 101, webSocket: clientWebSocket })
     })
     .post('/api/rooms/:roomId/broadcast-close', async (ctx) => {
@@ -58,7 +71,12 @@ export class RoomDO extends DurableObject<Env> {
       return ctx.text('OK')
     })
 
-  async handleConnect(roomId: string, sessionId: string): Promise<WebSocket> {
+  async handleConnect(
+    roomId: string,
+    sessionId: string,
+    userId: string,
+    userName: string
+  ): Promise<WebSocket> {
     if (!this.roomId) {
       await this.ctx.blockConcurrencyWhile(async () => {
         await this.ctx.storage.put('roomId', roomId)
@@ -71,7 +89,33 @@ export class RoomDO extends DurableObject<Env> {
 
     const room = await this.getRoom()
 
+    this.userSessions.set(sessionId, { userId, userName })
+
+    room.getSessions().forEach(({ sessionId: existingSessionId }) => {
+      if (existingSessionId !== sessionId) {
+        room.sendCustomMessage(existingSessionId, {
+          type: 'user-joined',
+          userName,
+        })
+      }
+    })
+
     room.handleSocketConnect({ sessionId, socket: serverWebSocket })
+
+    serverWebSocket.addEventListener('close', () => {
+      const userInfo = this.userSessions.get(sessionId)
+      if (userInfo) {
+        room.getSessions().forEach(({ sessionId: existingSessionId }) => {
+          if (existingSessionId !== sessionId) {
+            room.sendCustomMessage(existingSessionId, {
+              type: 'user-left',
+              userName: userInfo.userName,
+            })
+          }
+        })
+        this.userSessions.delete(sessionId)
+      }
+    })
 
     return clientWebSocket
   }

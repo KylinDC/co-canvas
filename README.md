@@ -67,6 +67,9 @@ The application follows a serverless architecture deployed on Cloudflare's edge 
     -   **Host Actions**: The host can "Close Room", making it read-only for everyone.
     -   **Member Actions**: Members can "Leave Room" to remove it from their list.
 
+## 🐛  Known Issues
+-  Tldraw frontend board has an issue with read-only mode, even set the editor as read-only, but it's still editable. 
+
 ## 🏃‍♂️ Getting Started
 
 ### Prerequisites

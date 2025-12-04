@@ -20,7 +20,6 @@ export default defineWorkersProject(async () => {
         workers: {
           wrangler: { configPath: './wrangler.jsonc' },
           miniflare: {
-            // Make migrations available to tests
             bindings: {
               TEST_MIGRATIONS: migrations,
             },

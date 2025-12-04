@@ -68,7 +68,7 @@
       "binding": "DB",
       "database_name": "co-canvas-db",
       "migrations_dir": "drizzle",
-      "database_id": "6c31924b-d5d2-4c75-9d01-928240f3c713"
+      "database_id": "5b649774-8886-40ef-91ca-2742a5809118"
     }
   ],
   "r2_buckets": [

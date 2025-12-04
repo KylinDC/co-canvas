@@ -2,10 +2,6 @@
 
 Co-Canvas is a real-time collaborative whiteboard application built with React, Cloudflare Workers, and tldraw. It allows users to create rooms, invite others, and draw together in real-time. You can try it online: [Co-Canvas](https://co-canvas.121314.best/)
 
-## 🐛  Known Issues
-- Beacuse the Tldraw library has an issue with read-only mode, even if the room is closed and I set the board to be readonly, the board is still editable.
-
-
 ## 🛠 Tech Stack
 
 ### Frontend

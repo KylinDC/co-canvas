@@ -1,6 +1,6 @@
 import './room.css'
 
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSync } from '@tldraw/sync'
 import {
   type ReactNode,
@@ -16,7 +16,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router'
-import { toast, Toaster } from 'sonner'
+import { toast,Toaster } from 'sonner'
 import { type Editor, type TLAssetStore, Tldraw } from 'tldraw'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -79,7 +79,7 @@ export function Room() {
   const [existingRoomId, setExistingRoomId] = useState<string | null>(null)
   const editorRef = useRef<Editor | null>(null)
 
-  const { data: userRoomData } = useQuery({
+  const { data: userRoomData, isLoading: isUserRoomLoading } = useQuery({
     queryKey: ['user-room', userId],
     queryFn: async () => {
       if (!userId) return null
@@ -110,6 +110,7 @@ export function Room() {
   const roomName = roomNameFromState ?? currentRoomData?.roomName
   const isCurrentUserHost = currentRoomData?.isCurrentUserHost ?? false
   const isRoomOpen = currentRoomData?.isOpen ?? false
+  const isLoading = isUserRoomLoading
 
   const joinRoomMutation = useMutation({
     mutationFn: async () => {
@@ -238,6 +239,8 @@ export function Room() {
     }
   }, [isRoomOpen])
 
+  const queryClient = useQueryClient()
+
   const handleCustomMessage = useCallback(
     (data: { type: string; userName?: string; message?: string }) => {
       if (data.type === 'room-closed') {
@@ -249,13 +252,23 @@ export function Room() {
         if (editorRef.current) {
           editorRef.current.updateInstanceState({ isReadonly: true })
         }
+
+        queryClient.setQueryData(
+          ['user-room', userId],
+          (oldData: RoomType[] | undefined) => {
+            if (!oldData) return oldData
+            return oldData.map((room) =>
+              room.roomId === roomId ? { ...room, isOpen: false } : room
+            )
+          }
+        )
       } else if (data.type === 'user-joined' && data.userName) {
         toast.info(`${data.userName} joined the room`)
       } else if (data.type === 'user-left' && data.userName) {
         toast.info(`${data.userName} left the room`)
       }
     },
-    []
+    [queryClient, userId, roomId]
   )
 
   const userInfo = useMemo(
@@ -347,6 +360,7 @@ export function Room() {
         isRoomOpen={isRoomOpen}
         onLeaveRoom={() => leaveRoomMutation.mutate()}
         onCloseRoom={() => closeRoomMutation.mutate()}
+        isLoading={isLoading}
       >
         <Tldraw
           store={store}
@@ -371,6 +385,7 @@ function RoomWrapper({
   isRoomOpen,
   onLeaveRoom,
   onCloseRoom,
+  isLoading,
 }: {
   children: ReactNode
   roomId?: string
@@ -380,6 +395,7 @@ function RoomWrapper({
   isRoomOpen: boolean
   onLeaveRoom: () => void
   onCloseRoom: () => void
+  isLoading: boolean
 }) {
   const [didCopy, setDidCopy] = useState(false)
 
@@ -447,7 +463,25 @@ function RoomWrapper({
           )}
         </div>
       </div>
-      <div className='RoomWrapper-content'>{children}</div>
+      <div className='RoomWrapper-content'>
+        {children}
+        {!isRoomOpen && !isLoading && <RoomClosedOverlay />}
+      </div>
+    </div>
+  )
+}
+
+function RoomClosedOverlay() {
+  return (
+    <div className='absolute inset-0 z-[100] flex items-center justify-center bg-black/10 backdrop-blur-[2px]'>
+      <Card className='w-full max-w-md mx-4 shadow-lg'>
+        <CardHeader>
+          <CardTitle className='text-center'>Room Closed</CardTitle>
+          <CardDescription className='text-center'>
+            This session has been ended by the host.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </div>
   )
 }

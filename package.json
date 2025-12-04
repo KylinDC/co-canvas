@@ -30,6 +30,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.1.0",
     "@hono/zod-validator": "^0.7.5",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-separator": "^1.1.8",

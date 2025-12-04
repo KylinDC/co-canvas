@@ -92,7 +92,6 @@ export const Lobby = () => {
       const res = await client.api.rooms.$post({
         json: {
           userId,
-          name: `${userName}'s Room`,
         },
       })
       if (!res.ok) {

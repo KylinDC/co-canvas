@@ -4,11 +4,12 @@ import { z } from 'zod'
 
 import { createRoomReq, getRoomWithUserIdReq, joinRoomReq } from '../schemas'
 import { RoomService } from '../services/room.service'
+import { generateRandomRoomName } from '../utils.ts'
 
 export const roomRoutes = new Hono<{ Bindings: Env }>()
   .post('/api/rooms', zValidator('json', createRoomReq), async (ctx) => {
     const { env, req, json } = ctx
-    const { userId, name } = req.valid('json')
+    const { userId } = req.valid('json')
 
     try {
       const roomService = new RoomService(env)
@@ -24,8 +25,10 @@ export const roomRoutes = new Hono<{ Bindings: Env }>()
         )
       }
 
-      // Create room and join as host
-      const result = await roomService.createRoom(name, userId)
+      const result = await roomService.createRoom(
+        generateRandomRoomName(),
+        userId
+      )
       const roomId = result[0].id
       await roomService.joinRoom(userId, roomId)
 

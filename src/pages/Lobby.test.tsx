@@ -200,7 +200,6 @@ describe('Lobby', () => {
       expect(apiLib.client.api.rooms.$post).toHaveBeenCalledWith({
         json: {
           userId: 'test-user-id',
-          name: "Test User's Room",
         },
       })
       expect(mockNavigate).toHaveBeenCalledWith('/rooms/new-room-id', {

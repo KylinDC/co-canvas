@@ -16,7 +16,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router'
-import { toast, Toaster } from 'sonner'
+import { toast,Toaster } from 'sonner'
 import { type Editor, type TLAssetStore, Tldraw } from 'tldraw'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -351,6 +351,7 @@ export function Room() {
         <Tldraw
           store={store}
           deepLinks
+          licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           onMount={(editor) => {
             editorRef.current = editor
             editor.updateInstanceState({ isReadonly: !isRoomOpen })

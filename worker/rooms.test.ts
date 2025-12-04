@@ -13,8 +13,9 @@ describe('rooms', () => {
   describe('createRoom', () => {
     it('should create a new room with valid name', async () => {
       const roomName = 'Test Room'
+      const userId = uuidv7()
 
-      const result = await createRoom(env, roomName)
+      const result = await createRoom(env, roomName, userId)
 
       expect(result).toHaveLength(1)
       expect(result[0].id).toBeDefined()
@@ -28,15 +29,18 @@ describe('rooms', () => {
     })
 
     it('should create unique IDs for different rooms', async () => {
-      const room1 = await createRoom(env, 'Room 1')
-      const room2 = await createRoom(env, 'Room 2')
+      const userId1 = uuidv7()
+      const userId2 = uuidv7()
+      const room1 = await createRoom(env, 'Room 1', userId1)
+      const room2 = await createRoom(env, 'Room 2', userId2)
 
       expect(room1[0].id).not.toBe(room2[0].id)
     })
 
     it('should create a Durable Object ID', async () => {
       const roomName = 'Test Room'
-      await createRoom(env, roomName)
+      const userId = uuidv7()
+      await createRoom(env, roomName, userId)
       const db = drizzle(env.DB)
       const createdRooms = await db.select().from(rooms).all()
 
@@ -47,39 +51,47 @@ describe('rooms', () => {
   })
 
   describe('joinRoom', () => {
-    it('should add user to room as non-host by default', async () => {
-      const room = await createRoom(env, 'Test Room')
+    it('should add user to room', async () => {
+      const hostId = uuidv7()
+      const room = await createRoom(env, 'Test Room', hostId)
       const roomId = room[0].id
       const userId = uuidv7()
 
       const result = await joinRoom(env, userId, roomId)
 
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(roomId)
+      const resultRoomId = Array.isArray(result)
+        ? result[0].roomId
+        : result.roomId
+      expect(resultRoomId).toBe(roomId)
 
       const db = drizzle(env.DB)
       const joinedRooms = await db.select().from(userRooms).all()
       expect(joinedRooms).toHaveLength(1)
       expect(joinedRooms[0].userId).toBe(userId)
       expect(joinedRooms[0].roomId).toBe(roomId)
-      expect(joinedRooms[0].isHost).toBe(false)
     })
 
-    it('should add user to room as host when specified', async () => {
-      const room = await createRoom(env, 'Test Room')
+    it('should return existing room if user already joined', async () => {
+      const hostId = uuidv7()
+      const room = await createRoom(env, 'Test Room', hostId)
       const roomId = room[0].id
       const userId = uuidv7()
 
-      await joinRoom(env, userId, roomId, true)
+      await joinRoom(env, userId, roomId)
+      const result = await joinRoom(env, userId, roomId)
 
       const db = drizzle(env.DB)
       const joinedRooms = await db.select().from(userRooms).all()
       expect(joinedRooms).toHaveLength(1)
-      expect(joinedRooms[0].isHost).toBe(true)
+      const resultRoomId = Array.isArray(result)
+        ? result[0].roomId
+        : result.roomId
+      expect(resultRoomId).toBe(roomId)
     })
 
     it('should create unique IDs for different user-room associations', async () => {
-      const room = await createRoom(env, 'Test Room')
+      const hostId = uuidv7()
+      const room = await createRoom(env, 'Test Room', hostId)
       const roomId = room[0].id
       const userId1 = uuidv7()
       const userId2 = uuidv7()
@@ -94,18 +106,21 @@ describe('rooms', () => {
       expect(joinedRooms[0].id).not.toBe(joinedRooms[1].id)
     })
 
-    it('should allow the same user to join with explicit asHost parameter', async () => {
-      const room = await createRoom(env, 'Test Room')
+    it('should allow multiple users to join the same room', async () => {
+      const hostId = uuidv7()
+      const room = await createRoom(env, 'Test Room', hostId)
       const roomId = room[0].id
       const userId = uuidv7()
 
-      const result1 = await joinRoom(env, userId, roomId, false)
-      expect(result1[0].id).toBe(roomId)
+      const result = await joinRoom(env, userId, roomId)
+      const resultRoomId = Array.isArray(result)
+        ? result[0].roomId
+        : result.roomId
+      expect(resultRoomId).toBe(roomId)
 
       const db = drizzle(env.DB)
       const joinedRooms = await db.select().from(userRooms).all()
       expect(joinedRooms).toHaveLength(1)
-      expect(joinedRooms[0].isHost).toBe(false)
     })
   })
 })

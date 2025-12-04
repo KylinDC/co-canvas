@@ -3,11 +3,12 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import {
+  closeRoom,
   createRoom,
-  exitRoom,
   getRoom,
   getRoomWithUserId,
   joinRoom,
+  leaveRoom,
 } from './rooms.ts'
 import { createRoomReq, getRoomWithUserIdReq, joinRoomReq } from './schemas.ts'
 
@@ -15,9 +16,20 @@ export const app = new Hono<{ Bindings: Env }>()
   .post('/api/rooms', zValidator('json', createRoomReq), async (ctx) => {
     const { env, req, json } = ctx
     const { userId, name } = req.valid('json')
-    const roomId = (await createRoom(env, name))[0].id
 
-    await joinRoom(env, userId, roomId, true)
+    const currentUserRoom = await getRoomWithUserId(env, userId, true)
+    if (currentUserRoom.length > 0) {
+      return json(
+        {
+          errorMessage: `User already joined another open room with roomId: ${currentUserRoom[0].roomId}`,
+        },
+        400
+      )
+    }
+
+    const roomId = (await createRoom(env, name, userId))[0].id
+
+    await joinRoom(env, userId, roomId)
 
     return json({ id: roomId })
   })
@@ -25,13 +37,20 @@ export const app = new Hono<{ Bindings: Env }>()
     const { env, req, json, notFound } = ctx
 
     const { userId } = req.valid('query')
-    const userRoom = await getRoomWithUserId(env, userId)
+    const userRooms = await getRoomWithUserId(env, userId)
 
-    if (!userRoom) {
+    if (userRooms.length === 0) {
       return notFound()
     }
 
-    return json({ roomId: userRoom[0].roomId, roomName: userRoom[0].roomName })
+    return json(
+      userRooms.map((room) => ({
+        roomId: room.roomId,
+        roomName: room.roomName,
+        isOpen: room.isOpen,
+        isCurrentUserHost: room.hostId === userId,
+      }))
+    )
   })
   .post(
     '/api/rooms/:roomId/join',
@@ -49,14 +68,19 @@ export const app = new Hono<{ Bindings: Env }>()
         return notFound()
       }
 
-      const currentUserRoom = await getRoomWithUserId(env, userId)
+      const currentUserRoom = await getRoomWithUserId(env, userId, true)
       if (currentUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
         return json(
           {
-            errorMessage: `User already joined another room with roomId: ${currentUserRoom[0].roomId}`,
+            errorMessage: `User already joined another open room with roomId: ${currentUserRoom[0].roomId}`,
+            existingRoomId: currentUserRoom[0].roomId,
           },
           400
         )
+      }
+
+      if (!room.isOpen && currentUserRoom.length) {
+        return json({ errorMessage: `Room has been closed` }, 400)
       }
 
       await joinRoom(env, userId, roomId)
@@ -65,7 +89,7 @@ export const app = new Hono<{ Bindings: Env }>()
     }
   )
   .post(
-    '/api/rooms/:roomId/exit',
+    '/api/rooms/:roomId/leave',
     zValidator('param', z.object({ roomId: z.uuidv7() })),
     zValidator('json', z.object({ userId: z.uuidv7() })),
     async (ctx) => {
@@ -80,7 +104,32 @@ export const app = new Hono<{ Bindings: Env }>()
         return notFound()
       }
 
-      await exitRoom(env, userId, roomId)
+      await leaveRoom(env, userId, roomId)
+
+      return body(null)
+    }
+  )
+  .post(
+    '/api/rooms/:roomId/close',
+    zValidator('param', z.object({ roomId: z.uuidv7() })),
+    zValidator('json', z.object({ userId: z.uuidv7() })),
+    async (ctx) => {
+      const { env, req, body, notFound, json } = ctx
+
+      const { roomId } = req.valid('param')
+      const { userId } = req.valid('json')
+
+      const room = await getRoom(env, roomId)
+
+      if (!room) {
+        return notFound()
+      }
+
+      if (room.hostId !== userId) {
+        json({ errorMessage: 'Only host can close room' }, 400)
+      }
+
+      await closeRoom(env, roomId)
 
       return body(null)
     }
@@ -110,7 +159,7 @@ export const app = new Hono<{ Bindings: Env }>()
       z.object({ userId: z.uuidv7(), sessionId: z.string() })
     ),
     async (ctx) => {
-      const { env, req, notFound } = ctx
+      const { env, req, notFound, json } = ctx
 
       const { roomId } = req.valid('param')
       const { userId } = req.valid('query')
@@ -119,6 +168,17 @@ export const app = new Hono<{ Bindings: Env }>()
 
       if (!room) {
         return notFound()
+      }
+
+      const currentUserRoom = await getRoomWithUserId(env, userId, true)
+      if (currentUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
+        return json(
+          {
+            errorMessage: `User already joined another open room with roomId: ${currentUserRoom[0].roomId}`,
+            existingRoomId: currentUserRoom[0].roomId,
+          },
+          400
+        )
       }
 
       await joinRoom(env, userId, roomId)

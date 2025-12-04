@@ -2,7 +2,7 @@ import './room.css'
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useSync } from '@tldraw/sync'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import {
   type NavigateFunction,
   useLocation,
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card'
 import { client } from '@/lib/api.ts'
 import { getUserId, getUserName } from '@/lib/user.ts'
+import type { RoomType } from '@/pages/Lobby.tsx'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const multiplayerAssetStore: TLAssetStore = {
@@ -63,19 +64,18 @@ export function Room() {
   const userName = state?.userName ?? getUserName()
   const roomNameFromState = state?.roomName
 
-  const hasJoinedRoom = useRef(false)
   const [errorType, setErrorType] = useState<
     '404' | '500' | 'already-joined' | null
   >(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [existingRoomId, setExistingRoomId] = useState<string | null>(null)
 
-  const { data: roomData } = useQuery({
-    queryKey: ['room', roomId],
+  const { data: userRoomData } = useQuery({
+    queryKey: ['user-room', userId],
     queryFn: async () => {
-      if (!roomId) return null
-      const res = await client.api.rooms[':roomId'].$get({
-        param: { roomId },
+      if (!userId) return null
+      const res = await client.api.rooms.$get({
+        query: { userId },
       })
       if (!res.ok) {
         if (res.status === 404) {
@@ -90,13 +90,17 @@ export function Room() {
         }
         throw new Error(res.statusText)
       }
-      return (await res.json()) as { id: string; name: string }
+      const json = await res.json()
+      return json as RoomType[]
     },
-    enabled: !!roomId && !roomNameFromState,
+    enabled: !!userId,
     retry: false,
   })
 
-  const roomName = roomNameFromState ?? roomData?.name
+  const currentRoomData = userRoomData?.find((room) => room.roomId === roomId)
+  const roomName = roomNameFromState ?? currentRoomData?.roomName
+  const isCurrentUserHost = currentRoomData?.isCurrentUserHost ?? false
+  const isRoomOpen = currentRoomData?.isOpen ?? true
 
   const joinRoomMutation = useMutation({
     mutationFn: async () => {
@@ -138,7 +142,8 @@ export function Room() {
       console.error('Failed to join room:', error)
       const message = error.message
 
-      if (errorType === 'already-joined') {
+      // Check if message contains "already joined another room" pattern
+      if (message.includes('already joined another room')) {
         const roomIdMatch = /roomId:\s*([a-zA-Z0-9-]+)/.exec(message)
         if (roomIdMatch) {
           setExistingRoomId(roomIdMatch[1])
@@ -149,25 +154,72 @@ export function Room() {
     },
   })
 
+  const leaveRoomMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId || !roomId) {
+        throw new Error('Missing userId or roomId')
+      }
+      const res = await client.api.rooms[':roomId'].leave.$post({
+        param: { roomId },
+        json: { userId },
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to leave room')
+      }
+
+      return await res.text()
+    },
+    onSuccess: () => {
+      void navigate('/rooms')
+    },
+    onError: (error) => {
+      console.error('Failed to leave room:', error)
+    },
+  })
+
+  const closeRoomMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId || !roomId) {
+        throw new Error('Missing userId or roomId')
+      }
+      const res = await client.api.rooms[':roomId'].close.$post({
+        param: { roomId },
+        json: { userId },
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to close room')
+      }
+
+      return await res.text()
+    },
+    onSuccess: () => {
+      void navigate('/rooms')
+    },
+    onError: (error) => {
+      console.error('Failed to close room:', error)
+    },
+  })
+
   useEffect(() => {
     if (!userId || !userName) {
       void navigate(`/?redirect=${encodeURIComponent(`/rooms/${roomId}`)}`)
     }
   }, [navigate, userId, userName, roomId])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignore mutation
   useEffect(() => {
-    if (userId && roomId && !hasJoinedRoom.current) {
+    if (userId && roomId) {
       joinRoomMutation.mutate()
-      hasJoinedRoom.current = true
     }
-  }, [userId, roomId, joinRoomMutation])
+  }, [userId, roomId])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: force to refresh
   useEffect(() => {
     setErrorType(null)
     setErrorMessage(null)
     setExistingRoomId(null)
-    hasJoinedRoom.current = false
   }, [roomId])
 
   const store = useSync({
@@ -244,7 +296,15 @@ export function Room() {
   }
 
   return (
-    <RoomWrapper roomId={roomId} roomName={roomName}>
+    <RoomWrapper
+      roomId={roomId}
+      roomName={roomName}
+      navigate={navigate}
+      isCurrentUserHost={isCurrentUserHost}
+      isRoomActive={isRoomOpen}
+      onLeaveRoom={() => leaveRoomMutation.mutate()}
+      onCloseRoom={() => closeRoomMutation.mutate()}
+    >
       <Tldraw store={store} deepLinks />
     </RoomWrapper>
   )
@@ -253,10 +313,20 @@ export function Room() {
 function RoomWrapper({
   children,
   roomName,
+  navigate,
+  isCurrentUserHost,
+  isRoomActive,
+  onLeaveRoom,
+  onCloseRoom,
 }: {
   children: ReactNode
   roomId?: string
   roomName?: string
+  navigate: NavigateFunction
+  isCurrentUserHost: boolean
+  isRoomActive: boolean
+  onLeaveRoom: () => void
+  onCloseRoom: () => void
 }) {
   const [didCopy, setDidCopy] = useState(false)
 
@@ -268,31 +338,61 @@ function RoomWrapper({
 
   return (
     <div className='RoomWrapper'>
-      <div className='RoomWrapper-header'>
-        <Button
-          type='button'
-          variant='ghost'
-          size='sm'
-          onClick={() => {
-            void navigate('/rooms')
-          }}
-          aria-label='back to lobby'
-        >
-          ← Back to Lobby
-        </Button>
-        <div>{roomName}</div>
-        <Button
-          type='button'
-          variant='outline'
-          size='sm'
-          onClick={() => {
-            void navigator.clipboard.writeText(window.location.href)
-            setDidCopy(true)
-          }}
-          aria-label='copy room link'
-        >
-          {didCopy ? 'Copied!' : 'Copy link'}
-        </Button>
+      <div
+        className='RoomWrapper-header'
+        style={{ justifyContent: 'space-between' }}
+      >
+        <div className='flex items-center gap-4'>
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={() => {
+              void navigate('/rooms')
+            }}
+            aria-label='back to lobby'
+          >
+            ← Back to Lobby
+          </Button>
+          <div>{roomName}</div>
+        </div>
+        <div className='flex gap-2'>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={() => {
+              void navigator.clipboard.writeText(window.location.href)
+              setDidCopy(true)
+            }}
+            aria-label='copy room link'
+          >
+            {didCopy ? 'Copied!' : 'Copy link'}
+          </Button>
+          {isCurrentUserHost ? (
+            <Button
+              type='button'
+              variant='destructive'
+              size='sm'
+              onClick={onCloseRoom}
+              aria-label='close room'
+              disabled={!isRoomActive}
+            >
+              Close Room
+            </Button>
+          ) : (
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={onLeaveRoom}
+              aria-label='leave room'
+              disabled={!isRoomActive}
+            >
+              Leave Room
+            </Button>
+          )}
+        </div>
       </div>
       <div className='RoomWrapper-content'>{children}</div>
     </div>

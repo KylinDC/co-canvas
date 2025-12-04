@@ -109,7 +109,14 @@ describe('Lobby', () => {
       ok: true,
       status: 200,
 
-      json: async () => ({ roomId: 'existing-room-id' }),
+      json: async () => [
+        {
+          roomId: 'existing-room-id',
+          roomName: 'Test Room',
+          isOpen: true,
+          isCurrentUserHost: true,
+        },
+      ],
     } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
@@ -118,9 +125,9 @@ describe('Lobby', () => {
       expect(screen.getByText('Welcome Test User')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('You are already in a room')).toBeInTheDocument()
+    expect(screen.getByText('You have an active room')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Enter Room' })
+      screen.getByRole('button', { name: 'Enter Open Room' })
     ).toBeInTheDocument()
   })
 
@@ -131,22 +138,33 @@ describe('Lobby', () => {
       ok: true,
       status: 200,
 
-      json: async () => ({ roomId: 'existing-room-id' }),
+      json: async () => [
+        {
+          roomId: 'existing-room-id',
+          roomName: 'Test Room',
+          isOpen: true,
+          isCurrentUserHost: true,
+        },
+      ],
     } as never)
 
     renderWithProviders(<Lobby />, { queryClient })
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: 'Enter Room' })
+        screen.getByRole('button', { name: 'Enter Open Room' })
       ).toBeInTheDocument()
     })
 
-    const enterButton = screen.getByRole('button', { name: 'Enter Room' })
+    const enterButton = screen.getByRole('button', { name: 'Enter Open Room' })
     await user.click(enterButton)
 
     expect(mockNavigate).toHaveBeenCalledWith('/rooms/existing-room-id', {
-      state: { userId: 'test-user-id', userName: 'Test User' },
+      state: {
+        userId: 'test-user-id',
+        userName: 'Test User',
+        roomName: 'Test Room',
+      },
     })
   })
 

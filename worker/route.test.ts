@@ -46,7 +46,6 @@ describe('route', () => {
       expect(joinedRooms).toHaveLength(1)
       expect(joinedRooms[0].userId).toBe(userId)
       expect(joinedRooms[0].roomId).toBe(json.id)
-      expect(joinedRooms[0].isHost).toBe(true)
     })
 
     it('should reject request with invalid userId', async () => {
@@ -293,7 +292,7 @@ describe('route', () => {
 
       const json = await joinResponse.json<{ errorMessage: string }>()
       expect(json.errorMessage).toBe(
-        `User already joined another room with roomId: ${roomId1}`
+        `User already joined another open room with roomId: ${roomId1}`
       )
     })
 

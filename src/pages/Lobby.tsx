@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button.tsx'
 import {
@@ -12,6 +13,43 @@ import {
 } from '@/components/ui/card.tsx'
 import { client } from '@/lib/api.ts'
 import { getUserId, getUserName } from '@/lib/user.ts'
+
+export interface RoomType {
+  roomId: string
+  roomName: string
+  isOpen: boolean
+  isCurrentUserHost: boolean
+}
+
+interface RoomItemProps {
+  room: RoomType
+  onEnterRoom: (roomId: string, roomName: string) => void
+}
+
+const RoomItem = ({ room, onEnterRoom }: RoomItemProps) => (
+  <div
+    className={`flex items-center justify-between p-3 rounded-lg border ${
+      room.isOpen
+        ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
+        : 'bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-800'
+    }`}
+  >
+    <div className='flex flex-col'>
+      <span className='font-medium text-sm'>{room.roomName}</span>
+      <span className='text-xs text-muted-foreground'>
+        {room.isOpen ? 'Open' : 'Closed'} •{' '}
+        {room.isCurrentUserHost ? 'Host' : 'Member'}
+      </span>
+    </div>
+    <Button
+      size='sm'
+      variant='outline'
+      onClick={() => onEnterRoom(room.roomId, room.roomName)}
+    >
+      Enter
+    </Button>
+  </div>
+)
 
 export const Lobby = () => {
   const location = useLocation()
@@ -42,7 +80,7 @@ export const Lobby = () => {
         throw new Error(res.statusText)
       }
       const json = await res.json()
-      return json as { roomId: string; roomName: string }
+      return json as RoomType[]
     },
     enabled: !!userId,
     retry: false,
@@ -58,7 +96,8 @@ export const Lobby = () => {
         },
       })
       if (!res.ok) {
-        throw new Error(res.statusText)
+        const errorData = (await res.json()) as { errorMessage?: string }
+        throw new Error(errorData.errorMessage ?? res.statusText)
       }
       return await res.json()
     },
@@ -67,14 +106,18 @@ export const Lobby = () => {
         state: { userId, userName },
       })
     },
+    onError: (error) => {
+      console.error('Failed to create room:', error)
+      toast.error('Failed to create room', {
+        description: error.message,
+      })
+    },
   })
 
-  const handleEnterRoom = () => {
-    if (roomData?.roomId) {
-      void navigate(`/rooms/${roomData.roomId}`, {
-        state: { userId, userName, roomName: roomData.roomName },
-      })
-    }
+  const handleEnterRoom = (roomId: string, roomName: string) => {
+    void navigate(`/rooms/${roomId}`, {
+      state: { userId, userName, roomName },
+    })
   }
 
   const handleCreateRoom = () => {
@@ -89,21 +132,48 @@ export const Lobby = () => {
     )
   }
 
+  const rooms = roomData ?? []
+  const openRoom = rooms.find((room) => room.isOpen)
+  const hasOpenRoom = !!openRoom
+
   return (
     <div className='flex items-center min-h-screen justify-center w-screen'>
-      <Card className='w-full max-w-sm flex justify-center'>
+      <Card className='w-full max-w-md flex justify-center'>
         <CardHeader>
           <CardTitle>Welcome {userName}</CardTitle>
           <CardDescription>
-            {roomData
-              ? 'You are already in a room'
-              : 'Create a new room to get started'}
+            {hasOpenRoom
+              ? 'You have an active room'
+              : rooms.length > 0
+                ? 'All your rooms are closed. Create a new one!'
+                : 'Create a new room to get started'}
           </CardDescription>
         </CardHeader>
-        <CardContent className='w-full'>
-          {roomData ? (
-            <Button onClick={handleEnterRoom} className='w-full'>
-              Enter Room
+        <CardContent className='w-full space-y-4'>
+          {rooms.length > 0 && (
+            <div className='space-y-2'>
+              <div className='text-sm font-medium text-muted-foreground'>
+                Your Rooms
+              </div>
+              <div className='space-y-2'>
+                {rooms.map((room) => (
+                  <RoomItem
+                    key={room.roomId}
+                    room={room}
+                    onEnterRoom={handleEnterRoom}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {hasOpenRoom ? (
+            <Button
+              onClick={() =>
+                openRoom && handleEnterRoom(openRoom.roomId, openRoom.roomName)
+              }
+              className='w-full'
+            >
+              Enter Open Room
             </Button>
           ) : (
             <Button

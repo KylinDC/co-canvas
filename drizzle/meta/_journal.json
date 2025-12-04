@@ -29,6 +29,27 @@
       "when": 1764665469290,
       "tag": "0003_glorious_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1764753681890,
+      "tag": "0004_slim_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1764753744965,
+      "tag": "0005_furry_liz_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1764773203813,
+      "tag": "0006_dashing_scorpion",
+      "breakpoints": true
     }
   ]
 }

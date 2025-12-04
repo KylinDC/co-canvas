@@ -29,13 +29,23 @@ vi.mock('@/lib/user.ts', () => ({
 
 const mockPost = vi.fn()
 const mockGet = vi.fn()
+const mockGetUserRooms = vi.fn()
+const mockLeaveRoom = vi.fn()
+const mockCloseRoom = vi.fn()
 vi.mock('@/lib/api.ts', () => ({
   client: {
     api: {
       rooms: {
+        $get: (params: unknown) => mockGetUserRooms(params),
         ':roomId': {
           join: {
             $post: (params: unknown) => mockPost(params),
+          },
+          leave: {
+            $post: (params: unknown) => mockLeaveRoom(params),
+          },
+          close: {
+            $post: (params: unknown) => mockCloseRoom(params),
           },
           $get: (params: unknown) => mockGet(params),
         },
@@ -72,6 +82,18 @@ describe('Room', () => {
     mockGet.mockResolvedValue({
       ok: true,
       json: async () => ({ id: 'test-room-id', name: 'Test Room' }),
+    })
+
+    mockGetUserRooms.mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          roomId: 'test-room-id',
+          roomName: 'Test Room',
+          isOpen: true,
+          isCurrentUserHost: false,
+        },
+      ],
     })
 
     Object.defineProperty(window, 'location', {
@@ -459,7 +481,7 @@ describe('Room', () => {
         state: { userId: 'test-user-id', userName: 'Test User' },
       })
 
-      mockGet.mockResolvedValue({
+      mockGetUserRooms.mockResolvedValue({
         ok: false,
         status: 404,
       })
@@ -523,7 +545,7 @@ describe('Room', () => {
         state: { userId: 'test-user-id', userName: 'Test User' },
       })
 
-      mockGet.mockResolvedValue({
+      mockGetUserRooms.mockResolvedValue({
         ok: false,
         status: 503,
       })
@@ -586,8 +608,8 @@ describe('Room', () => {
       renderWithProviders(<Room />)
 
       await waitFor(() => {
-        expect(mockGet).toHaveBeenCalledWith({
-          param: { roomId: 'test-room-id' },
+        expect(mockGetUserRooms).toHaveBeenCalledWith({
+          query: { userId: 'test-user-id' },
         })
       })
 
@@ -619,7 +641,7 @@ describe('Room', () => {
         state: { userId: 'test-user-id', userName: 'Test User' },
       })
 
-      mockGet.mockResolvedValue({
+      mockGetUserRooms.mockResolvedValue({
         ok: false,
         status: 404,
       })

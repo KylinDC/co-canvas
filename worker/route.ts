@@ -68,8 +68,13 @@ export const app = new Hono<{ Bindings: Env }>()
         return notFound()
       }
 
-      const currentUserRoom = await getRoomWithUserId(env, userId, true)
-      if (currentUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
+      const currentUserRoom = await getRoomWithUserId(env, userId, false)
+      if (currentUserRoom.some((ur) => ur.roomId === roomId)) {
+        return json({ roomId })
+      }
+
+      const openUserRoom = currentUserRoom.filter((ur) => ur.isOpen)
+      if (openUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
         return json(
           {
             errorMessage: `User already joined another open room with roomId: ${currentUserRoom[0].roomId}`,
@@ -82,8 +87,6 @@ export const app = new Hono<{ Bindings: Env }>()
       if (!room.isOpen && currentUserRoom.length) {
         return json({ errorMessage: `Room has been closed` }, 400)
       }
-
-      await joinRoom(env, userId, roomId)
 
       return json({ roomId })
     }
@@ -178,8 +181,17 @@ export const app = new Hono<{ Bindings: Env }>()
         return notFound()
       }
 
-      const currentUserRoom = await getRoomWithUserId(env, userId, true)
-      if (currentUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
+      const currentUserRoom = await getRoomWithUserId(env, userId, false)
+      if (currentUserRoom.some((ur) => ur.roomId === roomId)) {
+        await joinRoom(env, userId, roomId)
+        const doId = env.ROOM_DO.idFromString(room.doId)
+        const roomStub = env.ROOM_DO.get(doId)
+
+        return roomStub.fetch(req.raw)
+      }
+
+      const openUserRoom = currentUserRoom.filter((ur) => ur.isOpen)
+      if (openUserRoom.length > 0 && currentUserRoom[0].roomId !== roomId) {
         return json(
           {
             errorMessage: `User already joined another open room with roomId: ${currentUserRoom[0].roomId}`,
@@ -188,7 +200,6 @@ export const app = new Hono<{ Bindings: Env }>()
           400
         )
       }
-
       await joinRoom(env, userId, roomId)
       const doId = env.ROOM_DO.idFromString(room.doId)
       const roomStub = env.ROOM_DO.get(doId)

@@ -49,12 +49,12 @@ export class RoomDO extends DurableObject<Env> {
       return new Response(null, { status: 101, webSocket: clientWebSocket })
     })
     .post('/api/rooms/:roomId/broadcast-close', async (ctx) => {
-      const room = await this.getRoom()
-      room.getSessions().forEach(({ sessionId }) => {
-        console.log('xxxxx', sessionId, 'closed')
-
-        room.sendCustomMessage(sessionId, { type: 'room-closed' })
-      })
+      if (this.roomPromise) {
+        const room = await this.getRoom()
+        room.getSessions().forEach(({ sessionId }) => {
+          room.sendCustomMessage(sessionId, { type: 'room-closed' })
+        })
+      }
       return ctx.text('OK')
     })
 

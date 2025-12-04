@@ -1,6 +1,10 @@
 # Co-Canvas
 
-Co-Canvas is a real-time collaborative whiteboard application built with React, Cloudflare Workers, and tldraw. It allows users to create rooms, invite others, and draw together in real-time.
+Co-Canvas is a real-time collaborative whiteboard application built with React, Cloudflare Workers, and tldraw. It allows users to create rooms, invite others, and draw together in real-time. You can try it online: [Co-Canvas](https://co-canvas.121314.best/)
+
+## 🐛  Known Issues
+- Beacuse the Tldraw library has an issue with read-only mode, even if the room is closed and I set the board to be readonly, the board is still editable.
+
 
 ## 🛠 Tech Stack
 
@@ -67,9 +71,6 @@ The application follows a serverless architecture deployed on Cloudflare's edge 
     -   **Host Actions**: The host can "Close Room", making it read-only for everyone.
     -   **Member Actions**: Members can "Leave Room" to remove it from their list.
 
-## 🐛  Known Issues
--  Tldraw frontend board has an issue with read-only mode, even set the editor as read-only, but it's still editable. 
-
 ## 🏃‍♂️ Getting Started
 
 ### Prerequisites
@@ -106,40 +107,6 @@ pnpm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Deployment
-
-1.  **Login to Cloudflare**:
-    ```bash
-    pnpm dlx wrangler login
-    ```
-
-2.  **Apply Migrations (Production)**:
-    Run the migrations against your remote D1 database.
-    ```bash
-    pnpm run db:migrate:prod
-    ```
-
-3.  **Deploy**:
-    Build and deploy the application to Cloudflare Workers.
-    ```bash
-    pnpm run deploy
-    ```
-
-## 🧪 Testing
-
--   **Run Unit Tests**:
-    ```bash
-    pnpm run test
-    ```
--   **Run Worker Tests**:
-    ```bash
-    pnpm run test:worker
-    ```
--   **Run All Tests**:
-    ```bash
-    pnpm run test:all
-    ```
-
 ## 📂 Project Structure
 
 ```
@@ -161,3 +128,76 @@ co-canvas/
 ├── wrangler.jsonc      # Cloudflare Workers configuration
 └── package.json        # Project dependencies and scripts
 ```
+
+### Deployment (Optional)
+
+#### Configuration
+Before deploying, ensure your `wrangler.jsonc` is configured correctly, specifically the `routes` section if you are using a custom domain.
+
+```jsonc
+// wrangler.jsonc
+"routes": [
+  {
+    "pattern": "your-domain.com",
+    "custom_domain": true
+  }
+]
+```
+
+#### Option 1: Local Deployment
+You can deploy directly from your local machine using Wrangler.
+
+1.  **Login to Cloudflare**:
+    ```bash
+    pnpm dlx wrangler login
+    ```
+
+2.  **Apply Migrations (Production)**:
+    Run the migrations against your remote D1 database.
+    ```bash
+    pnpm run db:migrate:prod
+    ```
+
+3.  **Configure Environment Variables**:
+    Create a `.env` file in the root directory and add your Tldraw license key. This is required to deploy online. You can refer to the [Tldraw documentation](https://tldraw.com/docs/overview/getting-started#license) for more information.
+    ```env
+    VITE_TLDRAW_LICENSE_KEY=your_license_key_here
+    ```
+
+4.  **Deploy**:
+    Build and deploy the application to Cloudflare Workers.
+    ```bash
+    pnpm run deploy
+    ```
+
+#### Option 2: CI/CD Pipeline (GitHub Actions)
+This project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically deploys changes pushed to the `main` branch.
+
+**Prerequisites:**
+1.  Go to your GitHub repository settings -> **Secrets and variables** -> **Actions**.
+2.  Add the following **Repository secrets**:
+    -   `CLOUDFLARE_API_TOKEN`: Your Cloudflare API Token with Workers permissions.
+    -   `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID.
+    -   `VITE_TLDRAW_LICENSE_KEY`: Your Tldraw license key.
+
+Once set up, every push to `main` will trigger the deployment pipeline, which includes:
+-   Linting (Biome & ESLint)
+-   Type Checking
+-   Unit Tests (Frontend & Worker)
+-   Security Audit
+-   Deployment to Cloudflare Workers
+
+## 🧪 Testing
+
+-   **Run Unit Tests**:
+    ```bash
+    pnpm run test
+    ```
+-   **Run Worker Tests**:
+    ```bash
+    pnpm run test:worker
+    ```
+-   **Run All Tests**:
+    ```bash
+    pnpm run test:all
+    ```

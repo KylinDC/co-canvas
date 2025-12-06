@@ -103,6 +103,25 @@ pnpm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+## 🧪 Testing
+
+-   **Run Unit Tests**:
+    ```bash
+    pnpm run test
+    ```
+-   **Run Worker Tests**:
+    Run build before worker tests is only required for the first time
+    ```bash
+    pnpm run build
+    ```
+    ```bash
+    pnpm run test:worker
+    ```
+-   **Run All Tests**:
+    ```bash
+    pnpm run test:all
+    ```
+
 ## 📂 Project Structure
 
 ```
@@ -182,18 +201,3 @@ Once set up, every push to `main` will trigger the deployment pipeline, which in
 -   Unit Tests (Frontend & Worker)
 -   Security Audit
 -   Deployment to Cloudflare Workers
-
-## 🧪 Testing
-
--   **Run Unit Tests**:
-    ```bash
-    pnpm run test
-    ```
--   **Run Worker Tests**:
-    ```bash
-    pnpm run test:worker
-    ```
--   **Run All Tests**:
-    ```bash
-    pnpm run test:all
-    ```
